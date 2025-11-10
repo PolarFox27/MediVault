@@ -1,15 +1,16 @@
 stages:
   - test
 
-variables:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs='-Xmx1024m'"
-  JAVA_HOME: "/usr/lib/jvm/java-21-openjdk"
-  SPRING_PROFILES_ACTIVE: test
+image: gradle:8.10.2-jdk21
+
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .gradle/
+    - build/
 
 test:
   stage: test
-  image: gradle:8.10.2-jdk21
   script:
-    - echo "Running JUnit tests..."
-    - gradle --no-daemon clean test
-
+    - chmod +x gradlew
+    - ./gradlew clean test
