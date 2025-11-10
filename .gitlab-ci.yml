@@ -1,0 +1,21 @@
+stages:
+  - test
+
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs='-Xmx1024m'"
+  JAVA_HOME: "/usr/lib/jvm/java-21-openjdk"
+  SPRING_PROFILES_ACTIVE: test
+
+test:
+  stage: test
+  image: gradle:8.10.2-jdk21
+  script:
+    - echo "Running JUnit tests..."
+    - gradle --no-daemon clean test
+  artifacts:
+    when: always
+    reports:
+      junit: build/test-results/test/TEST-*.xml
+    paths:
+      - build/reports/tests/test/
+
