@@ -12,5 +12,5 @@ cache:
 test:
   stage: test
   script:
-    - chmod +x gradlew
-    - ./gradlew clean test
+    - chmod +x ./server/gradlew
+    - ./server/gradlew clean test
