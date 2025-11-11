@@ -51,7 +51,6 @@ public class AuthController {
     @PostMapping("/webauthn/register/user")
     @ResponseBody
     public String newUserRegistration(@RequestParam String username,
-                                      @RequestParam String display,
                                       HttpSession session) {
         Patient existingUser = service.getUserRepo().findByUsername(username);
         if (existingUser == null) {
@@ -62,7 +61,7 @@ public class AuthController {
 
             UserIdentity userIdentity = UserIdentity.builder()
                     .name(username)
-                    .displayName(display)
+                    .displayName(username)
                     .id(id)
                     .build();
             Patient saveUser = new Patient(userIdentity);
