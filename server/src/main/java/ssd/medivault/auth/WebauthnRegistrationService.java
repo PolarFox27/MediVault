@@ -7,10 +7,10 @@ import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import lombok.Getter;
-import ssd.medivault.data.AuthenticatorRepository;
-import ssd.medivault.data.UserRepository;
-import ssd.medivault.entities.AppUser;
-import ssd.medivault.entities.Authenticator;
+import ssd.medivault.data.PatientAuthenticatorRepository;
+import ssd.medivault.data.PatientRepository;
+import ssd.medivault.entities.Patient;
+import ssd.medivault.entities.PatientAuthenticator;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,18 +19,18 @@ import java.util.stream.Collectors;
 
 @Getter
 @Repository
-public class RegistrationService implements CredentialRepository {
+public class WebauthnRegistrationService implements CredentialRepository {
 
     @Autowired
-    private UserRepository userRepo;
+    private PatientRepository userRepo;
 
     @Autowired
-    private AuthenticatorRepository authRepository;
+    private PatientAuthenticatorRepository authRepository;
 
     @Override
     public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
-        AppUser user = userRepo.findByUsername(username);
-        List<Authenticator> auth = authRepository.findAllByUser(user);
+        Patient user = userRepo.findByUsername(username);
+        List<PatientAuthenticator> auth = authRepository.findAllByUser(user);
         return auth.stream()
                 .map(credential ->
                         PublicKeyCredentialDescriptor.builder()
@@ -41,19 +41,19 @@ public class RegistrationService implements CredentialRepository {
 
     @Override
     public Optional<ByteArray> getUserHandleForUsername(String username) {
-        AppUser user = userRepo.findByUsername(username);
+        Patient user = userRepo.findByUsername(username);
         return Optional.of(user.getHandle());
     }
 
     @Override
     public Optional<String> getUsernameForUserHandle(ByteArray userHandle) {
-        AppUser user = userRepo.findByHandle(userHandle);
+        Patient user = userRepo.findByHandle(userHandle);
         return Optional.of(user.getUsername());
     }
 
     @Override
     public Optional<RegisteredCredential> lookup(ByteArray credentialId, ByteArray userHandle) {
-        Optional<Authenticator> auth = authRepository.findByCredentialId(credentialId);
+        Optional<PatientAuthenticator> auth = authRepository.findByCredentialId(credentialId);
         return auth.map(credential ->
                 RegisteredCredential.builder()
                         .credentialId(credential.getCredentialId())
@@ -66,7 +66,7 @@ public class RegistrationService implements CredentialRepository {
 
     @Override
     public Set<RegisteredCredential> lookupAll(ByteArray credentialId) {
-        List<Authenticator> auth = authRepository.findAllByCredentialId(credentialId);
+        List<PatientAuthenticator> auth = authRepository.findAllByCredentialId(credentialId);
         return auth.stream()
                 .map(credential ->
                         RegisteredCredential.builder()

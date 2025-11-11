@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
-import ssd.medivault.auth.RegistrationService;
-import ssd.medivault.entities.AppUser;
-import ssd.medivault.entities.Authenticator;
+import ssd.medivault.auth.WebauthnRegistrationService;
+import ssd.medivault.entities.Patient;
+import ssd.medivault.entities.PatientAuthenticator;
 
 import java.io.IOException;
 import java.util.Random;
@@ -26,9 +26,9 @@ import java.util.Random;
 public class AuthController {
 
     private final RelyingParty relyingParty;
-    private final RegistrationService service;
+    private final WebauthnRegistrationService service;
 
-    AuthController(RegistrationService service, RelyingParty relyingParty) {
+    AuthController(WebauthnRegistrationService service, RelyingParty relyingParty) {
         this.relyingParty = relyingParty;
         this.service = service;
     }
@@ -44,16 +44,16 @@ public class AuthController {
     }
 
     @GetMapping("/register")
-    public String registerUser(Model model) {
+    public String registerUser() {
         return "register";
     }
 
-    @PostMapping("/register")
+    @PostMapping("/webauthn/register/user")
     @ResponseBody
     public String newUserRegistration(@RequestParam String username,
                                       @RequestParam String display,
                                       HttpSession session) {
-        AppUser existingUser = service.getUserRepo().findByUsername(username);
+        Patient existingUser = service.getUserRepo().findByUsername(username);
         if (existingUser == null) {
 
             byte[] bytes = new byte[32];
@@ -65,20 +65,19 @@ public class AuthController {
                     .displayName(display)
                     .id(id)
                     .build();
-            AppUser saveUser = new AppUser(userIdentity);
+            Patient saveUser = new Patient(userIdentity);
             service.getUserRepo().save(saveUser);
-            String response = newAuthRegistration(saveUser, session);
-            return response;
+            return newAuthRegistration(saveUser, session);
         } else {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username " + username
-                    + " already exists. Choose a new name.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Username '" + username + "' already exists. Choose a new name.");
         }
     }
 
-    @PostMapping("/registerauth")
+    @PostMapping("/webauthn/register/start")
     @ResponseBody
-    public String newAuthRegistration(@RequestParam AppUser user, HttpSession session) {
-        AppUser existingUser = service.getUserRepo().findByHandle(user.getHandle());
+    public String newAuthRegistration(@RequestParam Patient user, HttpSession session) {
+        Patient existingUser = service.getUserRepo().findByHandle(user.getHandle());
         if (existingUser != null) {
             UserIdentity userIdentity = user.toUserIdentity();
             StartRegistrationOptions registrationOptions = StartRegistrationOptions.builder()
@@ -86,9 +85,6 @@ public class AuthController {
                     .build();
             PublicKeyCredentialCreationOptions registration = relyingParty.startRegistration(registrationOptions);
             session.setAttribute(userIdentity.getName(), registration);
-            System.out.println("credentials stored in session");
-            System.out.println("Session ID: " + session.getId());
-            System.out.println("Username: " + userIdentity.getName());
             try {
                 return registration.toCredentialsCreateJson();
             } catch (JsonProcessingException e) {
@@ -96,12 +92,44 @@ public class AuthController {
                         "Error processing JSON.", e);
             }
         } else {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "User " + user.getUsername()
-                    + " does not exist. Please register.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "User '" + user.getUsername() + "' does not exist. Please register.");
         }
     }
 
-    @PostMapping("/login")
+    @PostMapping("/webauthn/register/finish")
+    @ResponseBody
+    public ModelAndView finishRegistration(@RequestParam String credential,
+                                           @RequestParam String username,
+                                           @RequestParam String credname,
+                                           HttpSession session) {
+        try {
+            Patient user = service.getUserRepo().findByUsername(username);
+            PublicKeyCredentialCreationOptions requestOptions =
+                    (PublicKeyCredentialCreationOptions) session.getAttribute(user.getUsername());
+            if (requestOptions != null) {
+                PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> pkc =
+                        PublicKeyCredential.parseRegistrationResponseJson(credential);
+                FinishRegistrationOptions options = FinishRegistrationOptions.builder()
+                        .request(requestOptions)
+                        .response(pkc)
+                        .build();
+                RegistrationResult result = relyingParty.finishRegistration(options);
+                PatientAuthenticator savedAuth = new PatientAuthenticator(result, pkc.getResponse(), user, credname);
+                service.getAuthRepository().save(savedAuth);
+                return new ModelAndView("redirect:/login");
+            } else {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Cached request expired. Try to register again!");
+            }
+        } catch (RegistrationFailedException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Registration failed.", e);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to save credentials, please try again!", e);
+        }
+    }
+
+    @PostMapping("/webauthn/login/start")
     @ResponseBody
     public String startLogin(@RequestParam String username, HttpSession session) {
         AssertionRequest request = relyingParty.startAssertion(StartAssertionOptions.builder()
@@ -115,39 +143,7 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/finishauth")
-    @ResponseBody
-    public ModelAndView finishRegisration(@RequestParam String credential,
-                                          @RequestParam String username,
-                                          @RequestParam String credname,
-                                          HttpSession session) {
-        try {
-            AppUser user = service.getUserRepo().findByUsername(username);
-            PublicKeyCredentialCreationOptions requestOptions =
-                    (PublicKeyCredentialCreationOptions) session.getAttribute(user.getUsername());
-            if (requestOptions != null) {
-                PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> pkc =
-                        PublicKeyCredential.parseRegistrationResponseJson(credential);
-                FinishRegistrationOptions options = FinishRegistrationOptions.builder()
-                        .request(requestOptions)
-                        .response(pkc)
-                        .build();
-                RegistrationResult result = relyingParty.finishRegistration(options);
-                Authenticator savedAuth = new Authenticator(result, pkc.getResponse(), user, credname);
-                service.getAuthRepository().save(savedAuth);
-                return new ModelAndView("redirect:/login");
-            } else {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Cached request expired. Try to register again!");
-            }
-        } catch (RegistrationFailedException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Registration failed.", e);
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to save credenital, please try again!", e);
-        }
-    }
-
-    @PostMapping("/welcome")
+    @PostMapping("/webauthn/login/finish")
     public String finishLogin(@RequestParam String credential,
                               @RequestParam String username,
                               Model model,

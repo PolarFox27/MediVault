@@ -5,7 +5,7 @@ import com.yubico.webauthn.data.RelyingPartyIdentity;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import ssd.medivault.auth.RegistrationService;
+import ssd.medivault.auth.WebauthnRegistrationService;
 import ssd.medivault.auth.WebAuthnConfiguration;
 
 @SpringBootApplication
@@ -17,7 +17,7 @@ public class MedivaultApplication {
 
 
     @Bean
-    public RelyingParty relyingParty(RegistrationService registrationRepository,
+    public RelyingParty relyingParty(WebauthnRegistrationService registrationRepository,
                                      WebAuthnConfiguration properties) {
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
                 .id(properties.getHostName())

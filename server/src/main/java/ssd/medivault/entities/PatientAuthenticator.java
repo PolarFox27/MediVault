@@ -19,7 +19,7 @@ import java.util.Optional;
 @Entity
 @Getter
 @NoArgsConstructor
-public class Authenticator {
+public class PatientAuthenticator {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -37,12 +37,7 @@ public class Authenticator {
     private ByteArray publicKey;
 
     @ManyToOne
-    private AppUser user;
-
-    /* The authenticator potentially provides a range of additional information. This
-     * application stores some of it to enable functionality that could be useful for
-     * a production-quality web authentication project.
-     */
+    private Patient user;
 
     @Column(nullable = false)
     private Long count;
@@ -51,10 +46,10 @@ public class Authenticator {
     @Column(nullable = true)
     private ByteArray aaguid;
 
-    public Authenticator(RegistrationResult result,
-                         AuthenticatorAttestationResponse response,
-                         AppUser user,
-                         String name) {
+    public PatientAuthenticator(RegistrationResult result,
+                                AuthenticatorAttestationResponse response,
+                                Patient user,
+                                String name) {
         Optional<AttestedCredentialData> attestationData = response.getAttestation()
                 .getAuthenticatorData()
                 .getAttestedCredentialData();

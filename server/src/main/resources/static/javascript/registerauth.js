@@ -1,7 +1,7 @@
 document.addEventListener("submit", (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    fetch('/register', {
+    fetch('/webauthn/register/user', {
         method: 'POST',
         body: formData
     })
@@ -44,7 +44,7 @@ document.addEventListener("submit", (e) => {
         const form = document.getElementById("form");
         const formData = new FormData(form);
         formData.append("credential", JSON.stringify(encodedResult));
-        return fetch("/finishauth", {
+        return fetch("/webauthn/register/finish", {
             method: 'POST',
             body: formData
         })

@@ -15,7 +15,7 @@ import jakarta.persistence.Lob;
 @Entity
 @Getter
 @NoArgsConstructor
-public class AppUser {
+public class Patient {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
@@ -30,7 +30,7 @@ public class AppUser {
     @Column(nullable = false, length = 64)
     private ByteArray handle;
 
-    public AppUser(UserIdentity user) {
+    public Patient(UserIdentity user) {
         this.handle = user.getId();
         this.username = user.getName();
         this.displayName = user.getDisplayName();
