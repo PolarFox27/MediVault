@@ -86,17 +86,25 @@ public final class CryptoUtils {
     // --- RSA signature / verification ---
 
     public static String signRSA(PrivateKey priv, String message) throws GeneralSecurityException {
+        return signRSA(priv, message.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static boolean verifyRSA(PublicKey pub, String message, String base64Signature) throws GeneralSecurityException {
+        return verifyRSA(pub, message.getBytes(StandardCharsets.UTF_8), base64Signature);
+    }
+
+    public static String signRSA(PrivateKey priv, byte[] data) throws GeneralSecurityException {
         Signature sig = Signature.getInstance("SHA256withRSA");
         sig.initSign(priv, new SecureRandom());
-        sig.update(message.getBytes(StandardCharsets.UTF_8));
+        sig.update(data);
         byte[] s = sig.sign();
         return Base64.getEncoder().encodeToString(s);
     }
 
-    public static boolean verifyRSA(PublicKey pub, String message, String base64Signature) throws GeneralSecurityException {
+    public static boolean verifyRSA(PublicKey pub, byte[] data, String base64Signature) throws GeneralSecurityException {
         Signature sig = Signature.getInstance("SHA256withRSA");
         sig.initVerify(pub);
-        sig.update(message.getBytes(StandardCharsets.UTF_8));
+        sig.update(data);
         byte[] s = Base64.getDecoder().decode(base64Signature);
         return sig.verify(s);
     }

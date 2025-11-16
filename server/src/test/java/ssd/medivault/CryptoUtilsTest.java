@@ -74,4 +74,31 @@ public class CryptoUtilsTest {
         boolean ok = CryptoUtils.verifyRSA(kp2.getPublic(), message, sig);
         assertFalse(ok);
     }
+
+    @Test
+    public void testFileRsaSignVerify() throws Exception {
+        KeyPair kp = CryptoUtils.generateRSAKeyPair();
+
+        java.nio.file.Path p = java.nio.file.Paths.get("src/test/resources/testdata/critical.txt");
+        byte[] fileBytes = java.nio.file.Files.readAllBytes(p);
+
+        String sig = CryptoUtils.signRSA(kp.getPrivate(), fileBytes);
+        assertNotNull(sig);
+
+        boolean ok = CryptoUtils.verifyRSA(kp.getPublic(), fileBytes, sig);
+        assertTrue(ok);
+    }
+
+    @Test
+    public void testFileRsaSignVerifyFail() throws Exception {
+        KeyPair kp1 = CryptoUtils.generateRSAKeyPair();
+        KeyPair kp2 = CryptoUtils.generateRSAKeyPair();
+
+        java.nio.file.Path p = java.nio.file.Paths.get("src/test/resources/testdata/critical.txt");
+        byte[] fileBytes = java.nio.file.Files.readAllBytes(p);
+
+        String sig = CryptoUtils.signRSA(kp1.getPrivate(), fileBytes);
+        boolean ok = CryptoUtils.verifyRSA(kp2.getPublic(), fileBytes, sig);
+        assertFalse(ok);
+    }
 }
