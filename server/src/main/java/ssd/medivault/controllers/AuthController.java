@@ -5,8 +5,10 @@ import com.yubico.webauthn.*;
 import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import com.yubico.webauthn.exception.RegistrationFailedException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import ssd.medivault.auth.AuthenticationToken;
 import ssd.medivault.auth.WebauthnRegistrationService;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
@@ -24,8 +27,6 @@ import java.util.Random;
 
 @Controller
 public class AuthController {
-
-    public static final String AUTH_USER = "AUTHENTICATED_USER";
 
     private final RelyingParty relyingParty;
     private final WebauthnRegistrationService service;
@@ -41,12 +42,8 @@ public class AuthController {
     }
 
     @GetMapping("/patient-dashboard")
-    public String patientDashboardPage(HttpSession session, Model model) {
-        String username = (String) session.getAttribute(AUTH_USER);
-        if (username == null) {
-            return "redirect:/patient-authentication";
-        }
-        model.addAttribute("username", username);
+    public String patientDashboardPage(Model model, Authentication auth) {
+        model.addAttribute("username", auth.getPrincipal());
         return "patient-dashboard";
     }
 
@@ -110,7 +107,8 @@ public class AuthController {
     @ResponseBody
     public ModelAndView finishRegistration(@RequestParam String credential,
                                            @RequestParam String credname,
-                                           HttpSession session) {
+                                           HttpSession session,
+                                           HttpServletRequest request) {
         try {
             Patient user = (Patient) session.getAttribute("registrationUser");
             PublicKeyCredentialCreationOptions requestOptions =
@@ -128,7 +126,7 @@ public class AuthController {
                 PatientAuthenticator savedAuth = new PatientAuthenticator(result, pkc.getResponse(), user, credname);
                 service.getAuthRepository().save(savedAuth);
 
-                session.setAttribute(AUTH_USER, user.getUsername());
+                AuthenticationToken.authenticate(user.getUsername(), request);
                 return new ModelAndView("redirect:/patient-dashboard");
 
             } else {
@@ -158,18 +156,18 @@ public class AuthController {
 
     @PostMapping("/webauthn/login/finish")
     public String finishLogin(@RequestParam String credential,
-                              Model model,
-                              HttpSession session) {
+                              HttpSession session,
+                              HttpServletRequest request) {
         try {
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> pkc;
             pkc = PublicKeyCredential.parseAssertionResponseJson(credential);
-            AssertionRequest request = (AssertionRequest)session.getAttribute("assertionRequest");
+            AssertionRequest req = (AssertionRequest)session.getAttribute("assertionRequest");
             AssertionResult result = relyingParty.finishAssertion(FinishAssertionOptions.builder()
-                    .request(request)
+                    .request(req)
                     .response(pkc)
                     .build());
             if (result.isSuccess()) {
-                session.setAttribute(AUTH_USER, result.getUsername());
+                AuthenticationToken.authenticate(result.getUsername(), request);
                 return "redirect:/patient-dashboard";
             } else {
                 return "redirect:/";
