@@ -25,6 +25,8 @@ import java.util.Random;
 @Controller
 public class AuthController {
 
+    public static final String AUTH_USER = "AUTHENTICATED_USER";
+
     private final RelyingParty relyingParty;
     private final WebauthnRegistrationService service;
 
@@ -38,15 +40,22 @@ public class AuthController {
         return "index";
     }
 
-    @GetMapping("/login")
-    public String loginPage() {
-        return "login";
+    @GetMapping("/patient-dashboard")
+    public String patientDashboardPage(HttpSession session, Model model) {
+        String username = (String) session.getAttribute(AUTH_USER);
+        if (username == null) {
+            return "redirect:/patient-authentication";
+        }
+        model.addAttribute("username", username);
+        return "patient-dashboard";
     }
 
-    @GetMapping("/register")
-    public String registerUser() {
-        return "register";
+
+    @GetMapping("/patient-authentication")
+    public String patientAuthPage() {
+        return "patient-authentication";
     }
+
 
     @PostMapping("/webauthn/register/user")
     @ResponseBody
@@ -118,7 +127,10 @@ public class AuthController {
                 RegistrationResult result = relyingParty.finishRegistration(options);
                 PatientAuthenticator savedAuth = new PatientAuthenticator(result, pkc.getResponse(), user, credname);
                 service.getAuthRepository().save(savedAuth);
-                return new ModelAndView("redirect:/login");
+
+                session.setAttribute(AUTH_USER, user.getUsername());
+                return new ModelAndView("redirect:/patient-dashboard");
+
             } else {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "Cached request expired. Try to register again!");
@@ -157,11 +169,12 @@ public class AuthController {
                     .response(pkc)
                     .build());
             if (result.isSuccess()) {
-                model.addAttribute("username", result.getUsername());
-                return "welcome";
+                session.setAttribute(AUTH_USER, result.getUsername());
+                return "redirect:/patient-dashboard";
             } else {
-                return "index";
+                return "redirect:/";
             }
+
         } catch (IOException | AssertionFailedException e) {
             throw new RuntimeException("Authentication failed", e);
         }

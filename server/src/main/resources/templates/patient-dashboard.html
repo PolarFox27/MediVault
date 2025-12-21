@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<link rel="icon" type="image/png" th:href="@{/icons/logo.png}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVault</title>
+    <link rel="stylesheet" th:href="@{/css/patient-dashboard.css}">
+</head>
+
+<body>
+
+<!-- Top Navigation Bar -->
+<header class="topbar">
+    <div class="topbar-content">
+
+        <!-- Left: Logo + Username -->
+        <div class="brand">
+            <img
+                    th:src="@{/icons/logo.png}"
+                    alt="MediVault"
+                    class="brand-logo"
+            />
+            <span class="username">
+                Anonymous Patient
+                <strong th:text="${username.substring(0,16) + '...'}"></strong>
+            </span>
+        </div>
+
+        <!-- Right: Settings -->
+        <a th:href="@{/settings}" class="settings-btn" aria-label="Settings">
+            <img th:src="@{/icons/settings.png}" alt="Settings" class="settings-icon">
+        </a>
+
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="main-content">
+    <h1>Welcome to MediVault</h1>
+    <p>
+        Your medical files are protected with
+        <strong>end-to-end encryption</strong> and accessible only by you.
+    </p>
+</main>
+
+</body>
+</html>

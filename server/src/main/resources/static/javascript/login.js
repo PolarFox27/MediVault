@@ -1,5 +1,5 @@
 async function checkCredentials() {
-    this.form = document.getElementById("form");
+    this.form = document.getElementById("loginForm");
     const formData = new FormData(form);
     fetch('/webauthn/login/start', {
         method: 'POST',

@@ -41,7 +41,7 @@ document.addEventListener("submit", (e) => {
         clientExtensionResults: publicKeyCredential.getClientExtensionResults(),
     }))
     .then((encodedResult) => {
-        const form = document.getElementById("form");
+        const form = document.getElementById("registerForm");
         const formData = new FormData(form);
         formData.append("credential", JSON.stringify(encodedResult));
         return fetch("/webauthn/register/finish", {
