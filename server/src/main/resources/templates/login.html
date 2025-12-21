@@ -11,8 +11,6 @@
             <div id="error"></div>
             <form action="/webauthn/login/finish" method="POST" id="form">
                 <legend class="f2 f1-l fw2 mb0 lh-title">Login</legend>
-                <label class="db fw6 lh-copy f6" for="username">Your Username:</label>
-                <input class="pa2 input-reset ba bg-transparent hover-bg-purple hover-white w-100" type="text" id="username" name="username">
                 <input type="hidden" id="credential" name="credential">
             </form>
             <button class="ba bw1 mv2 f6 no-underline br-pill ph3 pv2 dib white b--purple bg-purple" id="submit" onclick="checkCredentials();">Submit</button>

@@ -50,27 +50,19 @@ public class AuthController {
 
     @PostMapping("/webauthn/register/user")
     @ResponseBody
-    public String newUserRegistration(@RequestParam String username,
-                                      HttpSession session) {
-        Patient existingUser = service.getUserRepo().findByUsername(username);
-        if (existingUser == null) {
+    public String newUserRegistration(HttpSession session) {
+        byte[] bytes = new byte[32];
+        new Random().nextBytes(bytes);
+        ByteArray id = new ByteArray(bytes);
 
-            byte[] bytes = new byte[32];
-            new Random().nextBytes(bytes);
-            ByteArray id = new ByteArray(bytes);
-
-            UserIdentity userIdentity = UserIdentity.builder()
-                    .name(username)
-                    .displayName(username)
-                    .id(id)
-                    .build();
-            Patient saveUser = new Patient(userIdentity);
-            service.getUserRepo().save(saveUser);
-            return newAuthRegistration(saveUser, session);
-        } else {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Username '" + username + "' already exists. Choose a new name.");
-        }
+        UserIdentity userIdentity = UserIdentity.builder()
+                .name(id.getHex())
+                .displayName("Patient <" + id.getHex() + ">")
+                .id(id)
+                .build();
+        Patient saveUser = new Patient(userIdentity);
+        service.getUserRepo().save(saveUser);
+        return newAuthRegistration(saveUser, session);
     }
 
     @PostMapping("/webauthn/register/start")
@@ -81,9 +73,18 @@ public class AuthController {
             UserIdentity userIdentity = user.toUserIdentity();
             StartRegistrationOptions registrationOptions = StartRegistrationOptions.builder()
                     .user(userIdentity)
+                    .authenticatorSelection(
+                            AuthenticatorSelectionCriteria.builder()
+                                    .residentKey(ResidentKeyRequirement.REQUIRED)
+                                    .userVerification(UserVerificationRequirement.PREFERRED)
+                                    .build()
+                    )
                     .build();
             PublicKeyCredentialCreationOptions registration = relyingParty.startRegistration(registrationOptions);
-            session.setAttribute(userIdentity.getName(), registration);
+
+            session.setAttribute("registrationUser", user);
+            session.setAttribute("registrationRequest", registration);
+
             try {
                 return registration.toCredentialsCreateJson();
             } catch (JsonProcessingException e) {
@@ -99,13 +100,14 @@ public class AuthController {
     @PostMapping("/webauthn/register/finish")
     @ResponseBody
     public ModelAndView finishRegistration(@RequestParam String credential,
-                                           @RequestParam String username,
                                            @RequestParam String credname,
                                            HttpSession session) {
         try {
-            Patient user = service.getUserRepo().findByUsername(username);
+            Patient user = (Patient) session.getAttribute("registrationUser");
             PublicKeyCredentialCreationOptions requestOptions =
-                    (PublicKeyCredentialCreationOptions) session.getAttribute(user.getUsername());
+                    (PublicKeyCredentialCreationOptions) session.getAttribute("registrationRequest");
+
+
             if (requestOptions != null) {
                 PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> pkc =
                         PublicKeyCredential.parseRegistrationResponseJson(credential);
@@ -130,12 +132,12 @@ public class AuthController {
 
     @PostMapping("/webauthn/login/start")
     @ResponseBody
-    public String startLogin(@RequestParam String username, HttpSession session) {
+    public String startLogin(HttpSession session) {
         AssertionRequest request = relyingParty.startAssertion(StartAssertionOptions.builder()
-                .username(username)
+                .userVerification(UserVerificationRequirement.PREFERRED)
                 .build());
         try {
-            session.setAttribute(username, request);
+            session.setAttribute("assertionRequest", request);
             return request.toCredentialsGetJson();
         } catch (JsonProcessingException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -144,19 +146,18 @@ public class AuthController {
 
     @PostMapping("/webauthn/login/finish")
     public String finishLogin(@RequestParam String credential,
-                              @RequestParam String username,
                               Model model,
                               HttpSession session) {
         try {
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> pkc;
             pkc = PublicKeyCredential.parseAssertionResponseJson(credential);
-            AssertionRequest request = (AssertionRequest)session.getAttribute(username);
+            AssertionRequest request = (AssertionRequest)session.getAttribute("assertionRequest");
             AssertionResult result = relyingParty.finishAssertion(FinishAssertionOptions.builder()
                     .request(request)
                     .response(pkc)
                     .build());
             if (result.isSuccess()) {
-                model.addAttribute("username", username);
+                model.addAttribute("username", result.getUsername());
                 return "welcome";
             } else {
                 return "index";
