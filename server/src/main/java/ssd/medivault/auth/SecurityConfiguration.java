@@ -5,7 +5,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -35,6 +37,10 @@ public class SecurityConfiguration {
                         ).permitAll()                   // Authorize unauthenticated access to some endpoints and resources
                         .anyRequest().authenticated()   // Require authenticated access for any other request
                 )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(getAuthenticationEntryPoint())
+                        .accessDeniedHandler(getAccessDeniedHandler())    // Forbidden or unauthenticated access redirect to the home page
+                )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(logout -> logout
                         .logoutUrl("/logout")         // Specifies the logout URL
@@ -42,6 +48,19 @@ public class SecurityConfiguration {
                 );
 
         return http.build();
+    }
+
+
+    @Bean
+    AuthenticationEntryPoint getAuthenticationEntryPoint() {
+        return (request, response, authException) ->
+                response.sendRedirect("/");
+    }
+
+    @Bean
+    AccessDeniedHandler getAccessDeniedHandler() {
+        return (request, response, accessDeniedException) ->
+                response.sendRedirect("/");
     }
 }
 
