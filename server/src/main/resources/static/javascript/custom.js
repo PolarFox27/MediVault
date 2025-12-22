@@ -31,15 +31,14 @@ function initialCheckStatus(response) {
     checkStatus(response);
     return response.json();
 }
+
 function followRedirect(response) {
-    if (response.status == 200) {
+    if (response.status === 200) {
         window.location.href = response.url;
     } else {
         throwError(response);
     }
 }
 function displayError(error) {
-    const errorElem = document.getElementById('errors');
-    errorElem.innerHTML = error;
     console.error(error);
 }
