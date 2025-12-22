@@ -30,34 +30,42 @@ public class PatientAuthenticator {
 
     @Lob
     @Column(nullable = false)
-    private ByteArray credentialId;
+    private byte[] credentialId;
 
     @Lob
     @Column(nullable = false)
-    private ByteArray publicKey;
+    private byte[] publicKey;
 
     @ManyToOne
-    private Patient user;
+    private Patient patient;
 
     @Column(nullable = false)
     private Long count;
 
     @Lob
     @Column(nullable = true)
-    private ByteArray aaguid;
+    private byte[] aaguid;
 
     public PatientAuthenticator(RegistrationResult result,
                                 AuthenticatorAttestationResponse response,
-                                Patient user,
+                                Patient patient,
                                 String name) {
         Optional<AttestedCredentialData> attestationData = response.getAttestation()
                 .getAuthenticatorData()
                 .getAttestedCredentialData();
-        this.credentialId = result.getKeyId().getId();
-        this.publicKey = result.getPublicKeyCose();
-        this.aaguid = attestationData.get().getAaguid();
+        this.credentialId = result.getKeyId().getId().getBytes();
+        this.publicKey = result.getPublicKeyCose().getBytes();
+        this.aaguid = attestationData.map(AttestedCredentialData::getAaguid)
+                .map(ByteArray::getBytes)
+                .orElse(new byte[]{});
         this.count = result.getSignatureCount();
         this.name = name;
-        this.user = user;
+        this.patient = patient;
+    }
+
+    public record KeyRecord(String name, String credentialId) {}
+
+    public KeyRecord toRecord(){
+        return new KeyRecord(this.name, new ByteArray(this.credentialId).getHex());
     }
 }

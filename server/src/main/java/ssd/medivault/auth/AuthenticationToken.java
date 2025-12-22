@@ -18,7 +18,7 @@ public class AuthenticationToken
      * Constructor for the Authentication token.
      * It constructs a token for the given username and role.
      *
-     * @param username The username.
+     * @param username the username.
      * @param role The authorization level given to the user.
      */
     public AuthenticationToken(String username, Role role) {
@@ -66,9 +66,9 @@ public class AuthenticationToken
     }
 
 
-    public static enum Role{
+    public enum Role{
         PATIENT,
-        DOCTOR;
+        DOCTOR
     }
 }
 

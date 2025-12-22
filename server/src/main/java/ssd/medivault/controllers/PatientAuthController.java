@@ -121,7 +121,7 @@ public class PatientAuthController {
             RegistrationResult result = relyingParty.finishRegistration(options);
 
             // Store the patient and their authenticator in the database
-            Patient savedPatient = service.getUserRepo().save(patient);
+            Patient savedPatient = service.getPatientRepository().save(patient);
             PatientAuthenticator patientAuth = new PatientAuthenticator(result, pkc.getResponse(),
                                                                              savedPatient, credname);
             service.getAuthRepository().save(patientAuth);

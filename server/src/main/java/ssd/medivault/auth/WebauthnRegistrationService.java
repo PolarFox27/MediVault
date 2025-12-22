@@ -4,7 +4,6 @@ import com.yubico.webauthn.CredentialRepository;
 import com.yubico.webauthn.RegisteredCredential;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import lombok.Getter;
 import ssd.medivault.data.PatientAuthenticatorRepository;
@@ -21,44 +20,46 @@ import java.util.stream.Collectors;
 @Repository
 public class WebauthnRegistrationService implements CredentialRepository {
 
-    @Autowired
-    private PatientRepository userRepo;
+    private final PatientRepository patientRepository;
+    private final PatientAuthenticatorRepository authRepository;
 
-    @Autowired
-    private PatientAuthenticatorRepository authRepository;
+    public WebauthnRegistrationService(PatientRepository patientRepository, PatientAuthenticatorRepository authRepository) {
+        this.patientRepository = patientRepository;
+        this.authRepository = authRepository;
+    }
 
     @Override
     public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
-        Patient user = userRepo.findByUsername(username);
-        List<PatientAuthenticator> auth = authRepository.findAllByUser(user);
+        Patient patient = patientRepository.findByUsername(username);
+        List<PatientAuthenticator> auth = authRepository.findAllByPatient(patient);
         return auth.stream()
                 .map(credential ->
                         PublicKeyCredentialDescriptor.builder()
-                                .id(credential.getCredentialId())
+                                .id(new ByteArray(credential.getCredentialId()))
                                 .build())
                 .collect(Collectors.toSet());
     }
 
     @Override
     public Optional<ByteArray> getUserHandleForUsername(String username) {
-        Patient user = userRepo.findByUsername(username);
-        return Optional.of(user.getHandle());
+        Patient user = patientRepository.findByUsername(username);
+        return Optional.of(new ByteArray(user.getHandle()));
     }
 
     @Override
     public Optional<String> getUsernameForUserHandle(ByteArray userHandle) {
-        Patient user = userRepo.findByHandle(userHandle);
+        Patient user = patientRepository.findByHandle(userHandle.getBytes());
         return Optional.of(user.getUsername());
     }
 
     @Override
     public Optional<RegisteredCredential> lookup(ByteArray credentialId, ByteArray userHandle) {
-        Optional<PatientAuthenticator> auth = authRepository.findByCredentialId(credentialId);
+        Optional<PatientAuthenticator> auth = authRepository.findByCredentialId(credentialId.getBytes());
         return auth.map(credential ->
                 RegisteredCredential.builder()
-                        .credentialId(credential.getCredentialId())
-                        .userHandle(credential.getUser().getHandle())
-                        .publicKeyCose(credential.getPublicKey())
+                        .credentialId(new ByteArray(credential.getCredentialId()))
+                        .userHandle(new ByteArray(credential.getPatient().getHandle()))
+                        .publicKeyCose(new ByteArray(credential.getPublicKey()))
                         .signatureCount(credential.getCount())
                         .build()
         );
@@ -66,13 +67,13 @@ public class WebauthnRegistrationService implements CredentialRepository {
 
     @Override
     public Set<RegisteredCredential> lookupAll(ByteArray credentialId) {
-        List<PatientAuthenticator> auth = authRepository.findAllByCredentialId(credentialId);
+        List<PatientAuthenticator> auth = authRepository.findAllByCredentialId(credentialId.getBytes());
         return auth.stream()
                 .map(credential ->
                         RegisteredCredential.builder()
-                                .credentialId(credential.getCredentialId())
-                                .userHandle(credential.getUser().getHandle())
-                                .publicKeyCose(credential.getPublicKey())
+                                .credentialId(new ByteArray(credential.getCredentialId()))
+                                .userHandle(new ByteArray(credential.getPatient().getHandle()))
+                                .publicKeyCose(new ByteArray(credential.getPublicKey()))
                                 .signatureCount(credential.getCount())
                                 .build())
                 .collect(Collectors.toSet());

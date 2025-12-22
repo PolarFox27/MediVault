@@ -8,5 +8,5 @@ import ssd.medivault.entities.Patient;
 @Repository
 public interface PatientRepository extends CrudRepository<Patient, Long> {
     Patient findByUsername(String name);
-    Patient findByHandle(ByteArray handle);
+    Patient findByHandle(byte[] handle);
 }

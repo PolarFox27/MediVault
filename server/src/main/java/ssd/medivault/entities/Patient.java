@@ -25,10 +25,10 @@ public class Patient {
 
     @Lob
     @Column(nullable = false, length = 64)
-    private ByteArray handle;
+    private byte[] handle;
 
     public Patient(UserIdentity user) {
-        this.handle = user.getId();
+        this.handle = user.getId().getBytes();
         this.username = user.getName();
     }
 
@@ -36,7 +36,7 @@ public class Patient {
         return UserIdentity.builder()
                 .name(getUsername())
                 .displayName(getUsername())
-                .id(getHandle())
+                .id(new ByteArray(this.handle))
                 .build();
     }
 }

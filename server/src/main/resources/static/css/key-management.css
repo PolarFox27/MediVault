@@ -1,0 +1,13 @@
+/* Container */
+.keys-container {
+    width: 500px;
+    background: var(--background-color-1);
+    border-radius: 25px;
+    border: 1px solid var(--blue-2);
+    box-shadow: 0 25px 50px var(--shadow-color);
+    overflow: hidden;
+}
+
+h2 {
+    margin-bottom: 18px;
+}

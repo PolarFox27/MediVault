@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVault – Key Management</title>
+    <link rel="icon" type="image/png" th:href="@{/icons/logo.png}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/key-management.css}">
+</head>
+
+<body class="centered-container">
+<a th:href="@{/patient-dashboard}" class="btn-with-icon tooltip-button back-button" aria-label="Back">
+    <img th:src="@{/icons/back.png}" alt="Go Back" class="icon width-60">
+    <span class="tooltip">Go Back</span>
+</a>
+
+<div class="keys-container">
+    <h2>Registered Security Keys</h2>
+    <div th:each="key : ${keys}" class="centered-container gap-25">
+        <div th:text="${key.name}"></div>
+        <div th:text="${key.credentialId.substring(0, 8) + '...'}"></div>
+
+        <a th:href="@{/key-management}" class="btn-with-icon tooltip-button" aria-label="Back">
+            <img th:src="@{/icons/delete.png}" alt="Delete" class="icon width-40">
+            <span class="tooltip">Delete</span>
+        </a>
+    </div>
+</div>
+</body>
+</html>
