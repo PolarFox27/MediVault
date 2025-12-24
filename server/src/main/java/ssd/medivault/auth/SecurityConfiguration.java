@@ -30,7 +30,8 @@ public class SecurityConfiguration {
                         .requestMatchers(
                                 "/",
                                 "/patient-authentication",
-                                "/webauthn/**",
+                                "/webauthn/register/**",
+                                "/webauthn/login/**",
                                 "/css/**",
                                 "/javascript/**",
                                 "/icons/**"

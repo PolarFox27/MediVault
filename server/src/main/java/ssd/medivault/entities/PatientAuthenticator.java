@@ -14,10 +14,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
+import lombok.Setter;
+
 import java.util.Optional;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 public class PatientAuthenticator {
 
@@ -63,9 +66,18 @@ public class PatientAuthenticator {
         this.patient = patient;
     }
 
-    public record KeyRecord(String name, String credentialId) {}
+    /**
+     * Getter for the credential id in hexadecimal format.
+     *
+     * @return the credentialID as a hex string.
+     */
+    public String getCredentialIdAsString(){
+        return new ByteArray(this.credentialId).getHex();
+    }
+
+    public record KeyRecord(String name, String credentialId, long count) {}
 
     public KeyRecord toRecord(){
-        return new KeyRecord(this.name, new ByteArray(this.credentialId).getHex());
+        return new KeyRecord(this.name, this.getCredentialIdAsString(), this.count);
     }
 }

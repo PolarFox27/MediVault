@@ -9,11 +9,16 @@
     <link rel="icon" type="image/png" th:href="@{/icons/logo.png}">
     <link rel="stylesheet" th:href="@{/css/main.css}">
     <link rel="stylesheet" th:href="@{/css/patient-authentication.css}">
+
+    <!-- Scripts -->
+    <script th:src="@{/javascript/base64js.min.js}" defer></script>
+    <script th:src="@{/javascript/custom.js}" defer></script>
+    <script th:src="@{/javascript/patient-authentication.js}" defer></script>
 </head>
 
 <body class="centered-container">
 
-<a th:href="@{/}" class="btn-with-icon tooltip-button back-button" aria-label="Back">
+<a th:href="@{/}" class="btn-with-icon tooltip-button back-button">
     <img th:src="@{/icons/back.png}" alt="Go Back" class="icon width-60">
     <span class="tooltip">Go Back</span>
 </a>
@@ -31,8 +36,7 @@
 
         <!-- Login -->
         <div class="form-panel">
-            <h2>Passwordless Login</h2>
-            <div id="error"></div>
+            <h2 class="margin-bottom-20">Passwordless Login</h2>
             <form action="/webauthn/login/finish" method="POST" id="loginForm">
                 <input type="hidden" id="credential" name="credential">
                 <button type="button" onclick="checkCredentials()"
@@ -44,11 +48,10 @@
 
         <!-- Register -->
         <div class="form-panel">
-            <h2>Passwordless Registration</h2>
-            <div id="errors"></div>
+            <h2 class="margin-bottom-20">Passwordless Registration</h2>
             <form action="/webauthn/register/start" method="POST" id="registerForm">
-                <label for="credname">Security Key Name</label>
-                <input type="text" id="credname" name="credname" placeholder="Blue Yubikey" required>
+                <label for="credname" class="font-20 margin-bottom-5">Security Key Name</label>
+                <input type="text" id="credname" minlength="3" maxlength="16" name="credname" placeholder="Blue YubiKey" required>
                 <button type="submit" class="text-button text-button-1 fill-width font-20">
                     Register
                 </button>
@@ -57,27 +60,5 @@
 
     </div>
 </div>
-
-<!-- Scripts -->
-<script src="javascript/base64js.min.js"></script>
-<script src="javascript/custom.js"></script>
-<script src="javascript/login.js"></script>
-<script src="javascript/registerauth.js"></script>
-
-<script>
-    const forms = document.getElementById("forms");
-    const slider = document.getElementById("slider");
-
-    function showLogin() {
-        forms.style.transform = "translateX(0%)";
-        slider.style.transform = "translateX(0)";
-    }
-
-    function showRegister() {
-        forms.style.transform = "translateX(-50%)";
-        slider.style.transform = "translateX(100%)";
-    }
-</script>
-
 </body>
 </html>

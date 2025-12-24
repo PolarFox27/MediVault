@@ -40,7 +40,7 @@ public class PatientAuthController {
      * @param session the HTTP session object, used to store some attributes for the registration.
      * @return the credentials options to be sent to the client, in JSON format.
      */
-    @PostMapping("/webauthn/register/user")
+    @PostMapping("/webauthn/register/start")
     @ResponseBody
     public String startPatientRegistration(HttpSession session) {
 
@@ -127,7 +127,9 @@ public class PatientAuthController {
             service.getAuthRepository().save(patientAuth);
 
             // Authenticate the patient and redirect to the dashboard
-            AuthenticationToken.authenticatePatient(savedPatient.getUsername(), request);
+            AuthenticationToken.authenticatePatient(savedPatient.getUsername(),
+                                                    patientAuth.getCredentialIdAsString(),
+                                                    request);
             return new ModelAndView("redirect:/patient-dashboard");
 
         } catch (RegistrationFailedException e) {
@@ -185,9 +187,12 @@ public class PatientAuthController {
                     .response(pkc)
                     .build());
 
-            // If the assertion is successful, authenticate the user redirect them to the patient dashboard
+            // If the assertion is successful, authenticate the user and redirect them to the patient dashboard
             if (result.isSuccess()) {
-                AuthenticationToken.authenticatePatient(result.getUsername(), request);
+                service.updateSignatureCount(result.getCredential().getCredentialId(), result.getSignatureCount());
+                AuthenticationToken.authenticatePatient(result.getUsername(),
+                                                        result.getCredential().getCredentialId().getHex(),
+                                                        request);
                 return "redirect:/patient-dashboard";
             } else {
                 // If the assertion fails, redirect the client to the home page

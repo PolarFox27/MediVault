@@ -13,23 +13,30 @@ public class AuthenticationToken
         extends AbstractAuthenticationToken {
 
     private final String username;
+    private final String credentialId;
 
     /**
      * Constructor for the Authentication token.
-     * It constructs a token for the given username and role.
+     * It constructs a token for the given username, credential and role.
      *
      * @param username the username.
      * @param role The authorization level given to the user.
      */
-    public AuthenticationToken(String username, Role role) {
+    public AuthenticationToken(String username, String credentialId, Role role) {
         super(List.of(new SimpleGrantedAuthority(role.toString())));
         this.username = username;
+        this.credentialId = credentialId;
         setAuthenticated(true);
     }
 
+    /**
+     * Getter for the credential ID.
+     *
+     * @return the credential id associated with this token.
+     */
     @Override
     public Object getCredentials() {
-        return null;
+        return credentialId;
     }
 
     /**
@@ -48,10 +55,10 @@ public class AuthenticationToken
      * @param username the patient username
      * @param request the HTTP request
      */
-    public static void authenticatePatient(String username, HttpServletRequest request) {
+    public static void authenticatePatient(String username, String credentialId, HttpServletRequest request) {
 
         // Create the authentication token
-        AuthenticationToken auth = new AuthenticationToken(username, Role.PATIENT);
+        AuthenticationToken auth = new AuthenticationToken(username, credentialId, Role.PATIENT);
 
         // Create a security context with the token
         SecurityContext context = SecurityContextHolder.createEmptyContext();

@@ -1,3 +1,13 @@
+let showRegistration = false;
+let registrationBox = document.getElementById('registrationBox');
+let keyListBox = document.getElementById('keyListBox');
+
+function toggleRegistration() {
+    showRegistration = !showRegistration;
+    registrationBox.style.display = showRegistration ? 'block' : 'none';
+    keyListBox.style.display = showRegistration ? 'none' : 'block';
+}
+
 document.addEventListener("submit", (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);

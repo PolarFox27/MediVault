@@ -9,24 +9,73 @@
     <link rel="icon" type="image/png" th:href="@{/icons/logo.png}">
     <link rel="stylesheet" th:href="@{/css/main.css}">
     <link rel="stylesheet" th:href="@{/css/key-management.css}">
+    <script th:src="@{/javascript/register-new-key.js}" defer></script>
+    <script th:src="@{/javascript/custom.js}" defer></script>
 </head>
 
 <body class="centered-container">
-<a th:href="@{/patient-dashboard}" class="btn-with-icon tooltip-button back-button" aria-label="Back">
+<!-- Back Button -->
+<a th:href="@{/patient-dashboard}" class="btn-with-icon tooltip-button back-button">
     <img th:src="@{/icons/back.png}" alt="Go Back" class="icon width-60">
     <span class="tooltip">Go Back</span>
 </a>
 
-<div class="keys-container">
-    <h2>Registered Security Keys</h2>
-    <div th:each="key : ${keys}" class="centered-container gap-25">
-        <div th:text="${key.name}"></div>
-        <div th:text="${key.credentialId.substring(0, 8) + '...'}"></div>
+<!-- Key List Box -->
+<div class="centered-container vertical-flex gap-50">
+    <div class="keys-container" id="keyListBox">
+        <h2 class="margin-top-20 margin-bottom-10">Registered Security Keys</h2>
+        <div class="title-line auto-margin"></div>
 
-        <a th:href="@{/key-management}" class="btn-with-icon tooltip-button" aria-label="Back">
-            <img th:src="@{/icons/delete.png}" alt="Delete" class="icon width-40">
-            <span class="tooltip">Delete</span>
-        </a>
+        <!-- Key List -->
+        <div class="centered-container vertical-flex fill-width">
+            <div th:each="key : ${keys}" class="centered-container gap-25 key-row space-between fill-width">
+                <div class="centered-container gap-15">
+                    <div th:text="${key.name}" class="font-20 font-bold"></div>
+                    <div th:text="${'<' + key.credentialId.substring(0, 20) + '...>'}" class="font-20"></div>
+                </div>
+
+                <button class="btn-with-icon tooltip-button">
+                    <span th:text="${'' + key.count}" class="font-bold font-20"></span>
+                    <span th:text="${'Signature count: ' + key.count}" class="tooltip"></span>
+                </button>
+
+                <button th:if="${key.credentialId != currentCred}" class="btn-with-icon tooltip-button">
+                    <img th:src="@{/icons/delete.png}" alt="Delete" class="icon delete-icon width-30">
+                    <span class="tooltip">Delete</span>
+                </button>
+
+                <button th:if="${key.credentialId == currentCred}" class="btn-with-icon tooltip-button">
+                    <img th:src="@{/icons/delete.png}" alt="Delete" class="gray-icon width-30">
+                    <span class="tooltip">Cannot delete current key</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Register New Key Button-->
+        <div class="centered-container margin-top-75 margin-bottom-30">
+            <button class="text-button text-button-1 font-20" onclick="toggleRegistration()">
+                Add New Security Key
+            </button>
+        </div>
+    </div>
+
+    <!-- Register New Key Form-->
+    <div class="keys-container hidden horizontal-padding-50" id="registrationBox">
+        <h2 class="margin-bottom-30 margin-top-20">New Key Registration</h2>
+        <button class="btn-with-icon tooltip-button close-btn" onclick="toggleRegistration()">
+            <img th:src="@{/icons/close.png}" alt="Delete" class="icon delete-icon width-30">
+            <span class="tooltip">Close</span>
+        </button>
+        <form action="/webauthn/register/start" method="POST" id="registerNewKeyForm">
+            <label for="credname" class="font-20 margin-bottom-5">Security Key Name</label>
+            <input type="text" id="credname" minlength="3" maxlength="16" name="credname" placeholder="Blue YubiKey" required>
+            <div class="centered-container margin-top-50 margin-bottom-30">
+                <button type="submit" class="text-button text-button-1 font-20">
+                    Register New Key
+                </button>
+            </div>
+        </form>
+
     </div>
 </div>
 </body>
