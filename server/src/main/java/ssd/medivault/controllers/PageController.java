@@ -64,7 +64,7 @@ public class PageController {
      */
     @GetMapping("/key-management")
     public String keyManagementPage(Model model, Authentication auth) {
-        String username = Optional.ofNullable(auth.getPrincipal()).orElse("???").toString();
+        String username = String.valueOf(auth.getPrincipal());
         model.addAttribute("username", username);
         model.addAttribute("currentCred", auth.getCredentials());
 

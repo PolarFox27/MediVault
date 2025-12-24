@@ -15,6 +15,8 @@ public interface PatientAuthenticatorRepository extends CrudRepository<PatientAu
     Optional<PatientAuthenticator> findByCredentialId(byte[] credentialId);
     List<PatientAuthenticator> findAllByPatient (Patient patient);
     List<PatientAuthenticator> findAllByCredentialId(byte[] credentialId);
+    void deleteAllByCredentialId(byte[] credentialId);
+
 
     default Optional<PatientAuthenticator> findByCredentialId(String credentialId){
         try {
@@ -30,5 +32,12 @@ public interface PatientAuthenticatorRepository extends CrudRepository<PatientAu
         } catch (HexException e) {
             return List.of();
         }
+    }
+
+    default void deleteAllByCredentialId(String credentialId) {
+        try {
+            this.deleteAllByCredentialId(ByteArray.fromHex(credentialId).getBytes());
+        }
+        catch (HexException ignored) {}
     }
 }

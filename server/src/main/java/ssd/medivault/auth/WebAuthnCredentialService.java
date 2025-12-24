@@ -2,6 +2,7 @@ package ssd.medivault.auth;
 
 import com.yubico.webauthn.*;
 import com.yubico.webauthn.data.*;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Repository;
 import lombok.Getter;
 import ssd.medivault.data.PatientAuthenticatorRepository;
@@ -140,5 +141,15 @@ public class WebAuthnCredentialService implements CredentialRepository {
         PatientAuthenticator patientAuth = patientAuthOpt.get();
         patientAuth.setCount(newCount);
         authRepository.save(patientAuth);
+    }
+
+    /**
+     * This function removes a patient authentication key from the database based on the given credential ID.
+     *
+     * @param credentialId the ID of the credential to remove
+     */
+    @Transactional
+    public void deleteCredentials(String credentialId) {
+        authRepository.deleteAllByCredentialId(credentialId);
     }
 }

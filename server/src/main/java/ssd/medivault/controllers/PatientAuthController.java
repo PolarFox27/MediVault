@@ -9,9 +9,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import ssd.medivault.auth.AuthenticationToken;
@@ -21,6 +19,7 @@ import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
@@ -177,7 +176,7 @@ public class PatientAuthController {
     @ResponseBody
     public String startNewKeyRegistration(HttpSession session, Authentication auth) {
 
-        String username = Optional.ofNullable(auth.getPrincipal()).orElse("???").toString();
+        String username = String.valueOf(auth.getPrincipal());
 
         Optional<Patient> patient = credentialService.getPatientRepository().findByUsername(username);
 
@@ -216,5 +215,18 @@ public class PatientAuthController {
                 credname);
         credentialService.getAuthRepository().save(patientAuth);
         return new ModelAndView("redirect:/key-management");
+    }
+
+    @DeleteMapping("/webauthn/remove")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeAuthenticationKey(@RequestParam String credentialId,
+                                                Authentication auth) {
+
+        String currentCredentialId = String.valueOf(auth.getCredentials());
+        if(credentialId.equals(currentCredentialId)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot remove the current authentication key.");
+        }
+
+        credentialService.deleteCredentials(credentialId);
     }
 }

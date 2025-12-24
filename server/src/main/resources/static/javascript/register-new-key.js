@@ -10,6 +10,27 @@ function toggleRegistration() {
     keyListBox.style.display = showRegistration ? 'none' : 'block';
 }
 
+// Call the DELETE key endpoint to forget the authentication key provided
+function deleteKey(credentialId){
+    fetch(`/webauthn/remove?credentialId=${encodeURIComponent(credentialId)}`, {
+        method: "DELETE",
+        credentials: "same-origin"
+    })
+        .then((response) => {
+            window.location.reload();
+        })
+        .catch((error) => {
+            displayError(error);
+        });
+}
+
+// Bind the deleteKey function to the delete buttons in the key list
+document.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-btn");
+    if (!btn) return;
+    deleteKey(btn.dataset.credentialId);
+});
+
 
 // Performs the full key registration procedure based on the given form data (the credential name)
 async function register(formData) {
