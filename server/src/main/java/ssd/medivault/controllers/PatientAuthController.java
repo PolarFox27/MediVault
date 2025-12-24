@@ -19,7 +19,6 @@ import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 

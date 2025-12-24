@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+
+<!-- Top Navigation Bar -->
+<header class="topbar">
+    <div class="centered-container gap-15">
+        <img th:src="@{/icons/logo.png}" alt="MediVault" class="width-60"/>
+        <span class="font-20"> Patient <strong th:text="${'<' + username + '>'}"></strong></span>
+    </div>
+
+    <!-- Right: Buttons -->
+    <div class="centered-container gap-15">
+        <a th:href="@{/patient-dashboard}" class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/home.png}" alt="Dashboard" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Dashboard</span>
+        </a>
+        <a th:href="@{/doctor-list}" class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/doctors.png}" alt="Doctors" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Appointed Doctors</span>
+        </a>
+        <a th:href="@{/pending-changes}" class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/changes.png}" alt="Changes" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Pending Changes by Doctors</span>
+        </a>
+        <a th:href="@{/key-management}" class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/keys.png}" alt="Keys" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Manage Security Keys</span>
+        </a>
+        <a th:href="@{/logout}" class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/logout.png}" alt="Logout" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Logout</span>
+        </a>
+    </div>
+</header>
+
+</body>
+</html>

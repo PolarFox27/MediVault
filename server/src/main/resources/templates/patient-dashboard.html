@@ -13,28 +13,10 @@
 
 <body>
 
-<!-- Top Navigation Bar -->
-<header class="topbar">
-    <div class="centered-container gap-15">
-        <img th:src="@{/icons/logo.png}" alt="MediVault" class="width-60"/>
-        <span class="font-20"> Patient <strong th:text="${'<' + username + '>'}"></strong></span>
-    </div>
-
-    <!-- Right: Buttons -->
-    <div class="centered-container gap-15">
-        <a th:href="@{/key-management}" class="btn-with-icon tooltip-button">
-            <img th:src="@{/icons/keys.png}" alt="Keys" class="icon width-40">
-            <span class="tooltip tooltip-bottom">Manage Security Keys</span>
-        </a>
-        <a th:href="@{/logout}" class="btn-with-icon tooltip-button">
-            <img th:src="@{/icons/logout.png}" alt="Logout" class="icon width-40">
-            <span class="tooltip tooltip-bottom">Logout</span>
-        </a>
-    </div>
-</header>
+<div th:replace="fragments/header :: header"></div>
 
 <!-- Main Content -->
-<main class="main-content">
+<main class="main-content relative">
     <h1>Welcome to MediVault</h1>
     <p>
         Your medical files are protected with

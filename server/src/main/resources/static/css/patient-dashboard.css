@@ -1,14 +1,3 @@
-/* ===== Top Bar ===== */
-.topbar {
-    background: white;
-    border-bottom: 1px solid var(--blue-1);
-    margin: 0 auto;
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
 /* ===== Main Content ===== */
 .main-content {
     max-width: 800px;
