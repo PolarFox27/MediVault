@@ -1,9 +1,7 @@
 package ssd.medivault.auth;
 
-import com.yubico.webauthn.CredentialRepository;
-import com.yubico.webauthn.RegisteredCredential;
-import com.yubico.webauthn.data.ByteArray;
-import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
+import com.yubico.webauthn.*;
+import com.yubico.webauthn.data.*;
 import org.springframework.stereotype.Repository;
 import lombok.Getter;
 import ssd.medivault.data.PatientAuthenticatorRepository;
@@ -18,7 +16,7 @@ import java.util.stream.Collectors;
 
 @Getter
 @Repository
-public class WebauthnRegistrationService implements CredentialRepository {
+public class WebAuthnCredentialService implements CredentialRepository {
 
     private final PatientRepository patientRepository;
     private final PatientAuthenticatorRepository authRepository;
@@ -29,27 +27,10 @@ public class WebauthnRegistrationService implements CredentialRepository {
      * @param patientRepository the JPA repository storing patient information
      * @param authRepository the JPA repository storing patient authentication keys
      */
-    public WebauthnRegistrationService(PatientRepository patientRepository, PatientAuthenticatorRepository authRepository) {
+    public WebAuthnCredentialService(PatientRepository patientRepository,
+                                     PatientAuthenticatorRepository authRepository) {
         this.patientRepository = patientRepository;
         this.authRepository = authRepository;
-    }
-
-    /**
-     * This function retrieves the set of public keys associated with the given username.
-     *
-     * @param username the patient username
-     * @return the set of public key associated with that patient.
-     */
-    @Override
-    public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
-        Patient patient = patientRepository.findByUsername(username);
-        List<PatientAuthenticator> auth = authRepository.findAllByPatient(patient);
-        return auth.stream()
-                .map(credential ->
-                        PublicKeyCredentialDescriptor.builder()
-                                .id(new ByteArray(credential.getCredentialId()))
-                                .build())
-                .collect(Collectors.toSet());
     }
 
     /**
@@ -60,8 +41,9 @@ public class WebauthnRegistrationService implements CredentialRepository {
      */
     @Override
     public Optional<ByteArray> getUserHandleForUsername(String username) {
-        Patient user = patientRepository.findByUsername(username);
-        return Optional.of(new ByteArray(user.getHandle()));
+        return patientRepository.findByUsername(username)
+                .map(Patient::getHandle)
+                .map(ByteArray::new);
     }
 
     /**
@@ -71,8 +53,37 @@ public class WebauthnRegistrationService implements CredentialRepository {
      */
     @Override
     public Optional<String> getUsernameForUserHandle(ByteArray userHandle) {
-        Patient user = patientRepository.findByHandle(userHandle.getBytes());
-        return Optional.of(user.getUsername());
+        return patientRepository.findByHandle(userHandle.getBytes())
+                .map(Patient::getUsername);
+    }
+
+    /**
+     * Looks up the list of patient credentials associated with the given username in the database.
+     * If the username does not exist, an empty list is returned.
+     *
+     * @param username the username to look up
+     * @return the list of matching patient credentials.
+     */
+    public List<PatientAuthenticator> getAuthenticatorsForUsername(String username) {
+        return patientRepository.findByUsername(username)
+                .map(authRepository::findAllByPatient)
+                .orElse(List.of());
+    }
+
+    /**
+     * This function retrieves the set of public keys associated with the given username.
+     *
+     * @param username the patient username
+     * @return the set of public key associated with that patient.
+     */
+    @Override
+    public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
+        return getAuthenticatorsForUsername(username).stream()
+                .map(credential ->
+                        PublicKeyCredentialDescriptor.builder()
+                                .id(new ByteArray(credential.getCredentialId()))
+                                .build())
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -128,7 +139,6 @@ public class WebauthnRegistrationService implements CredentialRepository {
 
         PatientAuthenticator patientAuth = patientAuthOpt.get();
         patientAuth.setCount(newCount);
-        System.out.println("New count: " + newCount);
         authRepository.save(patientAuth);
     }
 }

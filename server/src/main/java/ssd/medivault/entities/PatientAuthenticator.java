@@ -46,7 +46,7 @@ public class PatientAuthenticator {
     private Long count;
 
     @Lob
-    @Column(nullable = true)
+    @Column()
     private byte[] aaguid;
 
     public PatientAuthenticator(RegistrationResult result,

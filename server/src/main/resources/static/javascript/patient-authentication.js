@@ -108,7 +108,6 @@ async function register(formData) {
                 body: formData
             })
         })
-
 }
 
 

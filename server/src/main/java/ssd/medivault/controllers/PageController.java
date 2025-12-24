@@ -4,9 +4,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import ssd.medivault.data.PatientAuthenticatorRepository;
-import ssd.medivault.data.PatientRepository;
-import ssd.medivault.entities.Patient;
+import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.entities.PatientAuthenticator;
 
 import java.util.List;
@@ -15,13 +13,11 @@ import java.util.Optional;
 @Controller
 public class PageController {
 
-    public final PatientRepository patientRepository;
-    public final PatientAuthenticatorRepository authenticatorRepository;
+    private final WebAuthnCredentialService registrationService;
 
 
-    public PageController(PatientRepository patientRepository, PatientAuthenticatorRepository authenticatorRepository) {
-        this.patientRepository = patientRepository;
-        this.authenticatorRepository = authenticatorRepository;
+    public PageController(WebAuthnCredentialService registrationService) {
+        this.registrationService = registrationService;
     }
 
     /**
@@ -72,8 +68,7 @@ public class PageController {
         model.addAttribute("username", username);
         model.addAttribute("currentCred", auth.getCredentials());
 
-        Patient patient = patientRepository.findByUsername(auth.getPrincipal().toString());
-        List<PatientAuthenticator.KeyRecord> keys = authenticatorRepository.findAllByPatient(patient)
+        List<PatientAuthenticator.KeyRecord> keys = registrationService.getAuthenticatorsForUsername(username)
                 .stream()
                 .map(PatientAuthenticator::toRecord)
                 .toList();
