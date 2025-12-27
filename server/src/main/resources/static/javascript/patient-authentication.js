@@ -116,7 +116,9 @@ document.addEventListener("submit", (e) => {
     e.preventDefault();
     register(new FormData(e.target))
         .then((response) => {
-            followRedirect(response);
+            console.log(response.json());
+            //window.location.href = "/patient-dashboard";
+            //followRedirect(response);
         })
         .catch((error) => {
             displayError(error);

@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import lombok.Setter;
+import ssd.medivault.utils.EncodingUtils;
 
 import java.util.Optional;
 
@@ -46,8 +47,20 @@ public class PatientAuthenticator {
     private Long count;
 
     @Lob
-    @Column()
+    @Column(nullable = false)
     private byte[] aaguid;
+
+    @Lob
+    @Column(nullable = false)
+    private byte[] encryptedUmk;
+
+    @Lob
+    @Column(nullable = false)
+    private byte[] iv;
+
+    @Lob
+    @Column(nullable = false)
+    private byte[] ephemeralPublicKey;
 
     public PatientAuthenticator(RegistrationResult result,
                                 AuthenticatorAttestationResponse response,
@@ -64,20 +77,36 @@ public class PatientAuthenticator {
         this.count = result.getSignatureCount();
         this.name = name;
         this.patient = patient;
+        this.encryptedUmk = new byte[]{};
+        this.iv = new byte[]{};
+        this.ephemeralPublicKey = new byte[]{};
     }
+
+    public record KeyRecord(String name, String credentialId, String publicKey, long count) {}
 
     /**
-     * Getter for the credential id in hexadecimal format.
+     * Converts this authentication into a record storing the key details.
+     * This record can be sent over to the client via HTTP as the byte fields are encoded into Hexadecimal.
      *
-     * @return the credentialID as a hex string.
+     * @return the converted record.
      */
-    public String getCredentialIdAsString(){
-        return new ByteArray(this.credentialId).getHex();
+    public KeyRecord toKeyRecord(){
+        return new KeyRecord(this.name, EncodingUtils.toHex(this.credentialId),
+                EncodingUtils.toHex(this.publicKey), this.count);
     }
 
-    public record KeyRecord(String name, String credentialId, long count) {}
+    public record EncryptedUmk(String encryptedUmk, String iv, String ephemeralPublicKey, String credentialId) {}
 
-    public KeyRecord toRecord(){
-        return new KeyRecord(this.name, this.getCredentialIdAsString(), this.count);
+    /**
+     * Creates a record storing the encrypted UMK, stored in hexadecimal format.
+     * It is sent to the client who can then decrypt it to retrieve the UMK.
+     *
+     * @return the object representing the encrypted UMK.
+     */
+    public EncryptedUmk getUmk(){
+        return new EncryptedUmk(EncodingUtils.toHex(this.encryptedUmk),
+                EncodingUtils.toHex(this.iv),
+                EncodingUtils.toHex(this.ephemeralPublicKey),
+                EncodingUtils.toHex(this.credentialId));
     }
 }

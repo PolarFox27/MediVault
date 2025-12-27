@@ -17,6 +17,7 @@ import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.auth.WebAuthnRegistrationService;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
+import ssd.medivault.utils.EncodingUtils;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -69,14 +70,14 @@ public class PatientAuthController {
      * @param credname the credential name provided by the user
      * @param session the HTTP session object
      * @param request the HTTP request object
-     * @return a redirect link to the patient dashboard if the registration is successful
+     * @return the public key of the registered credentials.
      */
     @PostMapping("/webauthn/register/finish")
     @ResponseBody
-    public ModelAndView finishPatientRegistration(@RequestParam String credential,
-                                                  @RequestParam String credname,
-                                                  HttpSession session,
-                                                  HttpServletRequest request) {
+    public PatientAuthenticator.KeyRecord finishPatientRegistration(@RequestParam String credential,
+                                                                    @RequestParam String credname,
+                                                                    HttpSession session,
+                                                                    HttpServletRequest request) {
         // Complete the registration
         WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
                 credential,
@@ -92,9 +93,10 @@ public class PatientAuthController {
 
         // Authenticate the patient and redirect to the dashboard
         AuthenticationToken.authenticatePatient(savedPatient.getUsername(),
-                patientAuth.getCredentialIdAsString(),
+                EncodingUtils.toHex(patientAuth.getCredentialId()),
                 request);
-        return new ModelAndView("redirect:/patient-dashboard");
+
+        return patientAuth.toKeyRecord();
     }
 
     /**
@@ -216,14 +218,24 @@ public class PatientAuthController {
         return new ModelAndView("redirect:/key-management");
     }
 
+    /**
+     * This function is the endpoint for deleting a security key of a patient.
+     * It checks if the patient is the owner of the key and if it is not the key they are currently connected with.
+     *
+     * @param credentialId the key to delete
+     * @param auth the authentication token
+     */
     @DeleteMapping("/webauthn/remove")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeAuthenticationKey(@RequestParam String credentialId,
-                                                Authentication auth) {
+    public void removeAuthenticationKey(@RequestParam String credentialId, Authentication auth) {
 
         String currentCredentialId = String.valueOf(auth.getCredentials());
         if(credentialId.equals(currentCredentialId)){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot remove the current authentication key.");
+        }
+
+        if(!credentialService.areCredentialsFromSamePatient(credentialId, currentCredentialId)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Cannot remove this key.");
         }
 
         credentialService.deleteCredentials(credentialId);

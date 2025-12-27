@@ -5,7 +5,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import ssd.medivault.auth.WebAuthnCredentialService;
+import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
+import ssd.medivault.utils.EncodingUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +42,7 @@ public class PageController {
      */
     @GetMapping("/patient-dashboard")
     public String patientDashboardPage(Model model, Authentication auth) {
-        model.addAttribute("username", auth.getPrincipal());
+        setBasicModelAttributes(model, registrationService, auth);
         return "patient-dashboard";
     }
 
@@ -65,15 +67,34 @@ public class PageController {
     @GetMapping("/key-management")
     public String keyManagementPage(Model model, Authentication auth) {
         String username = String.valueOf(auth.getPrincipal());
-        model.addAttribute("username", username);
-        model.addAttribute("currentCred", auth.getCredentials());
+        setBasicModelAttributes(model, registrationService, auth);
 
         List<PatientAuthenticator.KeyRecord> keys = registrationService.getAuthenticatorsForUsername(username)
                 .stream()
-                .map(PatientAuthenticator::toRecord)
+                .map(PatientAuthenticator::toKeyRecord)
                 .toList();
 
         model.addAttribute("keys", keys);
         return "key-management";
+    }
+
+    /**
+     * Helper function that defines the basic patient attributes in the model to be returned to the client.
+     * These attributes include the username, the active credentials, the name and DOB.
+     * These are retrieved from the authentication token and the database.
+     *
+     * @param model the Model to configure
+     * @param service the credential management service
+     * @param authentication the authentication token
+     */
+    public static void setBasicModelAttributes(Model model, WebAuthnCredentialService service, Authentication authentication) {
+        Optional<Patient> patient = service.getPatientRepository().findByUsername(String.valueOf(authentication.getPrincipal()));
+
+        if(patient.isPresent()) {
+            model.addAttribute("username", patient.get().getUsername());
+            model.addAttribute("currentCred", authentication.getCredentials());
+            model.addAttribute("encryptedName", EncodingUtils.toHex(patient.get().getEncryptedName()));
+            model.addAttribute("encryptedDOB", EncodingUtils.toHex(patient.get().getEncryptedDOB()));
+        }
     }
 }

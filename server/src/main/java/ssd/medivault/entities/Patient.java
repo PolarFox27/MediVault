@@ -24,12 +24,22 @@ public class Patient {
     private String username;
 
     @Lob
-    @Column(nullable = false, length = 64)
+    @Column(nullable = false)
     private byte[] handle;
+
+    @Lob
+    @Column(nullable = false)
+    private byte[] encryptedName;
+
+    @Lob
+    @Column(nullable = false)
+    private byte[] encryptedDOB;
 
     public Patient(UserIdentity user) {
         this.handle = user.getId().getBytes();
         this.username = user.getName();
+        this.encryptedName = new byte[]{};
+        this.encryptedDOB = new byte[]{};
     }
 
     public UserIdentity toUserIdentity() {
