@@ -58,9 +58,6 @@ public class PatientAuthenticator {
     @Column(nullable = false)
     private byte[] iv;
 
-    @Lob
-    @Column(nullable = false)
-    private byte[] ephemeralPublicKey;
 
     public PatientAuthenticator(RegistrationResult result,
                                 AuthenticatorAttestationResponse response,
@@ -79,7 +76,6 @@ public class PatientAuthenticator {
         this.patient = patient;
         this.encryptedUmk = new byte[]{};
         this.iv = new byte[]{};
-        this.ephemeralPublicKey = new byte[]{};
     }
 
     public record KeyRecord(String name, String credentialId, String publicKey, long count) {}
@@ -95,7 +91,7 @@ public class PatientAuthenticator {
                 EncodingUtils.toHex(this.publicKey), this.count);
     }
 
-    public record EncryptedUmk(String encryptedUmk, String iv, String ephemeralPublicKey, String credentialId) {}
+    public record EncryptedUmk(String encryptedUmk, String iv, String credentialId) {}
 
     /**
      * Creates a record storing the encrypted UMK, stored in hexadecimal format.
@@ -106,7 +102,6 @@ public class PatientAuthenticator {
     public EncryptedUmk getUmk(){
         return new EncryptedUmk(EncodingUtils.toHex(this.encryptedUmk),
                 EncodingUtils.toHex(this.iv),
-                EncodingUtils.toHex(this.ephemeralPublicKey),
                 EncodingUtils.toHex(this.credentialId));
     }
 }

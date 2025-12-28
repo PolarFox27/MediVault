@@ -197,7 +197,6 @@ public class WebAuthnCredentialService implements CredentialRepository {
         try {
             auth.setEncryptedUmk(EncodingUtils.fromHex(request.encryptedUmk()));
             auth.setIv(EncodingUtils.fromHex(request.iv()));
-            auth.setEphemeralPublicKey(EncodingUtils.fromHex(request.ephemeralPublicKey()));
             this.authRepository.save(auth);
             return true;
         } catch (HexException e) {

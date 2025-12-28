@@ -2,18 +2,14 @@ package ssd.medivault.controllers;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.entities.PatientAuthenticator;
 
 import java.util.Optional;
 
-@Controller
+@RestController
 public class UmkController {
 
     private final WebAuthnCredentialService credentialService;
@@ -31,7 +27,9 @@ public class UmkController {
      */
     @PostMapping("/umk/set")
     public void setPatientUmk(@RequestBody PatientAuthenticator.EncryptedUmk encryptedUmk, Authentication auth) {
-        if(!String.valueOf(auth.getCredentials()).equals(encryptedUmk.credentialId())){
+
+        if(!credentialService.areCredentialsFromSamePatient(String.valueOf(auth.getCredentials()),
+                                                                           encryptedUmk.credentialId())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
@@ -45,8 +43,6 @@ public class UmkController {
         if (!credentialService.setUmk(encryptedUmk)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-
-
     }
 
     /**
@@ -58,13 +54,16 @@ public class UmkController {
      * @return the encrypted Umk object.
      */
     @GetMapping("/umk/get")
-    @ResponseBody
     public PatientAuthenticator.EncryptedUmk getPatientUmk(Authentication auth) {
         Optional<PatientAuthenticator> authenticator = this.credentialService.getAuthRepository()
                 .findByCredentialId(String.valueOf(auth.getCredentials()));
 
         if(authenticator.isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+        System.out.println("Encrypted UMK: " + authenticator.get().getUmk().encryptedUmk());
+        System.out.println("IV: " + authenticator.get().getUmk().iv());
+        System.out.println("Credential ID: " + authenticator.get().getUmk().credentialId());
 
         return authenticator.get().getUmk();
     }

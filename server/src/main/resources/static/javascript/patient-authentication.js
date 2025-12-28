@@ -19,7 +19,7 @@ function showRegister() {
 // Then, submits the form to complete the login procedure.
 async function checkCredentials() {
     this.form = document.getElementById("loginForm");
-    const formData = new FormData(form);
+    const formData = new FormData(this.form);
     fetch('/webauthn/login/start', {
         method: 'POST',
         body: formData
@@ -101,13 +101,31 @@ async function register(formData) {
         }))
         .then((encodedResult) => {
             const form = document.getElementById("registerForm");
-            const formData = new FormData(form);
+            const formData = new FormData();
+            console.log(form.querySelector('[name="name"]').value);
+            console.log(form.querySelector('[name="dob"]').value);
+            formData.append("credname", form.querySelector('[name="credname"]').value);
             formData.append("credential", JSON.stringify(encodedResult));
             return fetch("/webauthn/register/finish", {
                 method: 'POST',
                 body: formData
             })
         })
+        .then(response => response.json())
+        .then(cred => {
+            return sendEncryptedUmk(cred.credentialId);
+        })
+}
+
+async function sendEncryptedUmk(credentialId) {
+    const encryptedUmk = await generateAndEncryptUMK(credentialId);
+    return fetch("/umk/set", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(encryptedUmk)
+    });
 }
 
 
@@ -116,8 +134,8 @@ document.addEventListener("submit", (e) => {
     e.preventDefault();
     register(new FormData(e.target))
         .then((response) => {
-            console.log(response.json());
-            //window.location.href = "/patient-dashboard";
+            console.log(response);
+            window.location.href = "/patient-dashboard";
             //followRedirect(response);
         })
         .catch((error) => {

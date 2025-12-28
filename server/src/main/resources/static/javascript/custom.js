@@ -9,6 +9,28 @@ function uint8arrayToBase64url(bytes) {
         return uint8arrayToBase64url(new Uint8Array(bytes));
     }
 }
+
+function hexToUint8Array(hex) {
+    if (hex.length % 2 !== 0) {
+        throw new Error("Invalid hex string");
+    }
+
+    const array = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+        array[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+    }
+    return array;
+}
+
+function uint8ArrayToHex(bytes) {
+    let hex = "";
+    for (let i = 0; i < bytes.length; i++) {
+        hex += bytes[i].toString(16).padStart(2, "0");
+    }
+    return hex;
+}
+
+
 class WebAuthServerError extends Error {
     constructor(foo = 'bar', ...params) {
       super(...params)

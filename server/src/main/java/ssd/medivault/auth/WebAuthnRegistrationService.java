@@ -60,6 +60,7 @@ public class WebAuthnRegistrationService {
         StartRegistrationOptions registrationOptions = StartRegistrationOptions.builder()
                 .user(userIdentity)
                 .authenticatorSelection(AuthenticatorSelectionCriteria.builder()
+                        .authenticatorAttachment(AuthenticatorAttachment.CROSS_PLATFORM)
                         .residentKey(ResidentKeyRequirement.REQUIRED)
                         .userVerification(UserVerificationRequirement.PREFERRED)
                         .build()
