@@ -1,13 +1,10 @@
-// HTML references for the new key registration box animation
 let showRegistration = false;
-let registrationBox = document.getElementById('registrationBox');
-let keyListBox = document.getElementById('keyListBox');
 
 // Show/Hide the new key registration box
 function toggleRegistration() {
     showRegistration = !showRegistration;
-    registrationBox.style.display = showRegistration ? 'block' : 'none';
-    keyListBox.style.display = showRegistration ? 'none' : 'block';
+    document.getElementById('registrationBox').style.display = showRegistration ? 'block' : 'none';
+    document.getElementById('keyListBox').style.display = showRegistration ? 'none' : 'block';
 }
 
 // Call the DELETE key endpoint to forget the authentication key provided
@@ -16,8 +13,8 @@ function deleteKey(credentialId){
         method: "DELETE",
         credentials: "same-origin"
     })
-        .then((response) => {
-            window.location.reload();
+        .then(() => {
+            navigate("/patient/key-management");
         })
         .catch((error) => {
             displayError(error);
@@ -33,7 +30,11 @@ document.addEventListener("click", e => {
 
 
 // Performs the full key registration procedure based on the given form data (the credential name)
-async function register(formData) {
+async function registerNewKey() {
+
+    this.form = document.getElementById("registerNewKeyForm");
+    const formData = new FormData(this.form);
+
     return fetch('/webauthn/newkey/start', {
         method: 'POST',
         body: formData
@@ -84,16 +85,17 @@ async function register(formData) {
         })
 }
 
+function showFullKeyManagementPage(showAll) {
+    document.getElementById("app-header").style.display = showAll ? "block" : "none";
+    document.getElementById("back-button").style.display = showAll ? "block" : "none";
+    document.getElementById('keyListBox').style.display = showAll ? "block" : "none";
+    document.getElementById('registrationBox').style.display = "none";
+}
 
-// Binds the registration function to the submission of the new key registration form
-document.addEventListener("submit", (e) => {
-    e.preventDefault();
-    register(new FormData(e.target))
-        .then((response) => {
-            followRedirect(response);
-        })
-        .catch((error) => {
-            displayError(error);
+function savePersonalDetails() {
+    if(UMK == null){
+        sendEncryptedUmk(CURRENT_CREDENTIALS.credentialId).then(() => {
+            showFullKeyManagementPage(true);
         });
-
-})
+    }
+}

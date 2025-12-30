@@ -136,14 +136,14 @@ public class WebAuthnCredentialService implements CredentialRepository {
      * @param credentialId the ID of the credential to update in the database
      * @param newCount the new signature count
      */
-    public void updateSignatureCount(ByteArray credentialId, Long newCount){
+    public PatientAuthenticator updateSignatureCount(ByteArray credentialId, Long newCount){
         Optional<PatientAuthenticator> patientAuthOpt = authRepository.findByCredentialId(credentialId.getBytes());
         if(patientAuthOpt.isEmpty())
-            return;
+            return null;
 
         PatientAuthenticator patientAuth = patientAuthOpt.get();
         patientAuth.setCount(newCount);
-        authRepository.save(patientAuth);
+        return authRepository.save(patientAuth);
     }
 
     /**

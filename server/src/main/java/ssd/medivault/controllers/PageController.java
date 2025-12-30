@@ -1,5 +1,6 @@
 package ssd.medivault.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,49 +24,88 @@ public class PageController {
     }
 
     /**
-     * GET Endpoint for the home page.
+     * Mapping returning the base page layout for all pages requested.
      *
-     * @return the home page model.
+     * @return the base HTML layout.
      */
     @GetMapping("/")
-    public String welcome() {
-        return "index";
+    public String app() {
+        return "layout";
+    }
+
+    /**
+     * GET Endpoint for the welcome page.
+     *
+     * @param request the HTTP Request object
+     * @return the welcome page model.
+     */
+    @GetMapping("/welcome")
+    public String welcome(HttpServletRequest request) {
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/welcome :: frag-welcome";
+        }
+        return "layout";
     }
 
     /**
      * GET Endpoint for the patient dashboard page.
      * This endpoint is protected and only accessible to authenticated patients.
      *
-     * @param model the UI model.
-     * @param auth the Authentication object to retrieve the patient username.
-     * @return the patient dashboard model.
+     * @param request the HTTP Request object
+     * @param model the UI model
+     * @param auth the Authentication object to retrieve the patient username
+     * @return the patient dashboard model
      */
-    @GetMapping("/patient-dashboard")
-    public String patientDashboardPage(Model model, Authentication auth) {
+    @GetMapping("/patient/dashboard")
+    public String patientDashboardPage(HttpServletRequest request, Model model, Authentication auth) {
         setBasicModelAttributes(model, registrationService, auth);
-        return "patient-dashboard";
+
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/patient/dashboard :: frag-patient-dashboard";
+        }
+        return "layout";
+    }
+
+    /**
+     * GET Endpoint for the patient header fragment.
+     * This endpoint is protected and only accessible to authenticated patients.
+     *
+     * @param request the HTTP Request object
+     * @return the patient header fragment.
+     */
+    @GetMapping("/patient/header")
+    public String patientHeader(HttpServletRequest request) {
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "fragments/topbar-patient :: frag-topbar-patient";
+        }
+        return "layout";
     }
 
     /**
      * GET Endpoint for the patient authentication page.
      *
+     * @param request the HTTP Request object
      * @return the patient authentication page model.
      */
-    @GetMapping("/patient-authentication")
-    public String patientAuthPage() {
-        return "patient-authentication";
+    @GetMapping("/auth/patient")
+    public String patientAuthPage(HttpServletRequest request) {
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/auth/patient-authentication :: frag-patient-authentication";
+        }
+        return "layout";
     }
 
     /**
-     * GET Endpoint for the patient key management page.
+     * GET Endpoint for the patient account management page.
      * This endpoint is protected and only accessible to authenticated patients.
      *
+     * @param request the HTTP Request object
      * @param model the UI model.
      * @param auth the Authentication object to retrieve the patient keys.
-     * @return the patient dashboard model.
+     * @return the patient account management model.
      */
-    @GetMapping("/key-management")
-    public String keyManagementPage(Model model, Authentication auth) {
+    @GetMapping("/patient/account")
+    public String keyManagementPage(HttpServletRequest request, Model model, Authentication auth) {
         String username = String.valueOf(auth.getPrincipal());
         setBasicModelAttributes(model, registrationService, auth);
 
@@ -73,9 +113,12 @@ public class PageController {
                 .stream()
                 .map(PatientAuthenticator::toKeyRecord)
                 .toList();
-
         model.addAttribute("keys", keys);
-        return "key-management";
+
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/patient/account :: frag-patient-account";
+        }
+        return "layout";
     }
 
     /**

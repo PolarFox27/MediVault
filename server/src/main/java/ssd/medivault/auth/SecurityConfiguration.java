@@ -29,7 +29,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
-                                "/patient-authentication",
+                                "/welcome",
+                                "/auth/**",
                                 "/webauthn/register/**",
                                 "/webauthn/login/**",
                                 "/css/**",

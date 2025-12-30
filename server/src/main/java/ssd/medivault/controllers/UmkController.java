@@ -54,6 +54,7 @@ public class UmkController {
      * @return the encrypted Umk object.
      */
     @GetMapping("/umk/get")
+    @ResponseBody
     public PatientAuthenticator.EncryptedUmk getPatientUmk(Authentication auth) {
         Optional<PatientAuthenticator> authenticator = this.credentialService.getAuthRepository()
                 .findByCredentialId(String.valueOf(auth.getCredentials()));
@@ -61,12 +62,7 @@ public class UmkController {
         if(authenticator.isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
-        System.out.println("Encrypted UMK: " + authenticator.get().getUmk().encryptedUmk());
-        System.out.println("IV: " + authenticator.get().getUmk().iv());
-        System.out.println("Credential ID: " + authenticator.get().getUmk().credentialId());
-
         return authenticator.get().getUmk();
     }
-
 }
 

@@ -134,7 +134,8 @@ public class PatientAuthController {
      * @return a redirect link to the patient dashboard if the registration is successful
      */
     @PostMapping("/webauthn/login/finish")
-    public String finishPatientLogin(@RequestParam String credential,
+    @ResponseBody
+    public PatientAuthenticator.KeyRecord finishPatientLogin(@RequestParam String credential,
                                      HttpSession session,
                                      HttpServletRequest request) {
         try {
@@ -149,14 +150,19 @@ public class PatientAuthController {
 
             // If the assertion is successful, authenticate the user and redirect them to the patient dashboard
             if (result.isSuccess()) {
-                credentialService.updateSignatureCount(result.getCredential().getCredentialId(), result.getSignatureCount());
+                PatientAuthenticator authenticator = credentialService.updateSignatureCount(result.getCredential().getCredentialId(),
+                        result.getSignatureCount());
+
+                if(authenticator == null) {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed");
+                }
+
                 AuthenticationToken.authenticatePatient(result.getUsername(),
-                                                        result.getCredential().getCredentialId().getHex(),
+                                                        EncodingUtils.toHex(authenticator.getCredentialId()),
                                                         request);
-                return "redirect:/patient-dashboard";
+                return authenticator.toKeyRecord();
             } else {
-                // If the assertion fails, redirect the client to the home page
-                return "redirect:/";
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed");
             }
 
         } catch (IOException | AssertionFailedException e) {

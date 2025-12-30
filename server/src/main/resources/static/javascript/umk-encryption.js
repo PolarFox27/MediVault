@@ -1,3 +1,6 @@
+let UMK = null;
+let CURRENT_CREDENTIALS = null;
+
 async function generateWebAuthnPRF(credentialId){
     const assertion = await navigator.credentials.get({
         publicKey: {
@@ -12,10 +15,11 @@ async function generateWebAuthnPRF(credentialId){
     return assertion.getClientExtensionResults().prf.results.first;
 }
 
-async function generateAndEncryptUMK(credentialId) {
-    const umk = crypto.getRandomValues(new Uint8Array(32));
-
-    const prf = await generateWebAuthnPRF(hexToUint8Array(credentialId));
+async function encryptUMK(credentialId, prf) {
+    if(UMK === null){
+        UMK = crypto.getRandomValues(new Uint8Array(32));
+        console.log("UMK GENERATED: " + uint8ArrayToHex(UMK));
+    }
 
     const hkdfKey = await crypto.subtle.importKey(
         "raw",
@@ -40,7 +44,7 @@ async function generateAndEncryptUMK(credentialId) {
 
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encryptedUmk = new Uint8Array(
-        await crypto.subtle.encrypt({ name: "AES-GCM", iv }, wrapKey, umk)
+        await crypto.subtle.encrypt({ name: "AES-GCM", iv }, wrapKey, UMK)
     );
 
     return {
@@ -51,10 +55,7 @@ async function generateAndEncryptUMK(credentialId) {
 }
 
 // --- Decrypt UMK (login time) ---
-async function decryptUMK({ encryptedUmk, iv, credentialId }) {
-
-    const prf = await generateWebAuthnPRF(hexToUint8Array(credentialId));
-
+async function decryptUMK({ encryptedUmk, iv, credentialId }, prf) {
     const hkdfKey = await crypto.subtle.importKey(
         "raw",
         prf,
@@ -76,11 +77,37 @@ async function decryptUMK({ encryptedUmk, iv, credentialId }) {
         ["decrypt"]
     );
 
-    return new Uint8Array(
+    UMK = new Uint8Array(
         await crypto.subtle.decrypt(
             {name: "AES-GCM", iv: hexToUint8Array(iv)},
             wrapKey,
             hexToUint8Array(encryptedUmk)
         )
     );
+}
+
+async function sendEncryptedUmk(credentialId) {
+
+    const prf = await generateWebAuthnPRF(hexToUint8Array(credentialId));
+
+    const encryptedUmk = await encryptUMK(credentialId, prf);
+    await fetch("/umk/set", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(encryptedUmk)
+    });
+}
+
+async function fetchEncryptedUmk(prf) {
+    const encryptedUmkResponse = await fetch("/umk/get", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    const encryptedUmk = await encryptedUmkResponse.json();
+    await decryptUMK(encryptedUmk, prf);
 }

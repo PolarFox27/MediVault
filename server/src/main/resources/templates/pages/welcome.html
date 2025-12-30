@@ -1,0 +1,9 @@
+<div th:fragment="frag-welcome" class="centered-container vertical-flex gap-50">
+    <h1>MediVault</h1>
+    <img th:src="@{/icons/logo.png}" alt="MediVault Logo" class="width-250">
+
+    <div class="centered-container gap-25">
+        <a th:href="@{/auth/patient}" data-client-nav class="text-button text-button-1">Patients</a>
+        <a th:href="@{/welcome}" data-client-nav class="text-button text-button-2">Doctors</a>
+    </div>
+</div>
