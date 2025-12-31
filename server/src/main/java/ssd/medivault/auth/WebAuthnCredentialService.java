@@ -10,6 +10,7 @@ import ssd.medivault.data.PatientAuthenticatorRepository;
 import ssd.medivault.data.PatientRepository;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
+import ssd.medivault.entities.PatientPrivateDetails;
 import ssd.medivault.utils.EncodingUtils;
 
 import java.util.Arrays;
@@ -198,6 +199,31 @@ public class WebAuthnCredentialService implements CredentialRepository {
             auth.setEncryptedUmk(EncodingUtils.fromHex(request.encryptedUmk()));
             auth.setIv(EncodingUtils.fromHex(request.iv()));
             this.authRepository.save(auth);
+            return true;
+        } catch (HexException e) {
+            return false;
+        }
+
+    }
+
+    /**
+     * This function saves the provided encrypted patient details in the database.
+     *
+     * @param details the object containing the encrypted private patient details.
+     * @param patient the patient whose details are updated.
+     * @return true if the operation was successful
+     */
+    public boolean setPrivateDetails(PatientPrivateDetails.PatientPrivateDetailsRecord details, Patient patient) {
+
+        if(patient == null)
+            return false;
+
+        try {
+            patient.getDetails().setDob(EncodingUtils.fromHex(details.dob()));
+            patient.getDetails().setName(EncodingUtils.fromHex(details.name()));
+            patient.getDetails().setDobIv(EncodingUtils.fromHex(details.dobIv()));
+            patient.getDetails().setNameIv(EncodingUtils.fromHex(details.nameIv()));
+            this.patientRepository.save(patient);
             return true;
         } catch (HexException e) {
             return false;

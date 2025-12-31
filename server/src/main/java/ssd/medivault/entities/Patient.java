@@ -2,15 +2,9 @@ package ssd.medivault.entities;
 
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.UserIdentity;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 
 @Entity
 @Getter
@@ -27,19 +21,13 @@ public class Patient {
     @Column(nullable = false)
     private byte[] handle;
 
-    @Lob
-    @Column(nullable = false)
-    private byte[] encryptedName;
-
-    @Lob
-    @Column(nullable = false)
-    private byte[] encryptedDOB;
+    @Embedded
+    public PatientPrivateDetails details;
 
     public Patient(UserIdentity user) {
         this.handle = user.getId().getBytes();
         this.username = user.getName();
-        this.encryptedName = new byte[]{};
-        this.encryptedDOB = new byte[]{};
+        this.details = new PatientPrivateDetails();
     }
 
     public UserIdentity toUserIdentity() {
