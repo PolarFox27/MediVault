@@ -16,6 +16,7 @@
 
     <!-- JS Scripts -->
     <script th:src="@{/javascript/client-nav.js}" defer></script>
+    <script th:src="@{/javascript/confirmation.js}" defer></script>
     <script th:src="@{/javascript/base64js.min.js}" defer></script>
     <script th:src="@{/javascript/custom.js}" defer></script>
     <script th:src="@{/javascript/umk-encryption.js}" defer></script>
@@ -29,7 +30,19 @@
 <header id="app-header"></header>
 
 <!-- Main Content -->
-<main id="app-content" class="centered-container">
+<main class="centered-container">
+    <div id="app-content" class="centered-container fill-height fill-width"></div>
+
+    <div id="confirm-overlay" class="hidden">
+        <div class="confirm-box">
+            <p id="confirm-message">Are you sure?</p>
+
+            <div class="confirm-actions">
+                <button id="cancel-button" class="confirm-overlay-button">Cancel</button>
+                <button id="confirm-button" class="confirm-overlay-button">Verify Key</button>
+            </div>
+        </div>
+    </div>
 </main>
 
 </body>

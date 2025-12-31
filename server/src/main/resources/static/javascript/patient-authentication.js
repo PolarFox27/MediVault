@@ -68,11 +68,11 @@ async function login() {
 }
 
 
-// Performs the full registration procedure based on the given form data (the credential name)
-async function register() {
-    this.form = document.getElementById("registerForm");
-    const formData = new FormData(this.form);
-    const response = await fetch('/webauthn/register/start', {
+async function registerKey(baseUrl = "/webauthn/register") {
+    this.form = document.getElementById("registerNewKeyForm");
+    const formData = new FormData();
+    formData.append("credname", this.form.querySelector('[name="credname"]').value);
+    const response = await fetch(baseUrl + "/start", {
         method: 'POST',
         body: formData
     });
@@ -108,17 +108,34 @@ async function register() {
         clientExtensionResults: publicKeyCredential.getClientExtensionResults(),
     };
 
-    const form = document.getElementById("registerForm");
-    const newFormData = new FormData();
-    newFormData.append("credname", form.querySelector('[name="credname"]').value);
-    newFormData.append("credential", JSON.stringify(encodedResult));
 
-    const newResponse = await fetch("/webauthn/register/finish", {
+    formData.append("credential", JSON.stringify(encodedResult));
+    const newResponse = await fetch(baseUrl + "/finish", {
         method: 'POST',
-        body: newFormData
+        body: formData
     });
 
-    CURRENT_CREDENTIALS = await initialCheckStatus(newResponse);
+    return await initialCheckStatus(newResponse);
+}
 
-    navigate("/patient/account", () => {showFullKeyManagementPage(false)});
+
+// Performs the full registration procedure based on the given form data (the credential name)
+async function register() {
+
+    const nameInput = document.getElementById("name");
+    const dobInput = document.getElementById("dob");
+    const crednameInput = document.getElementById("credname");
+
+    if(nameInput.value === "" || dobInput.value === "" || crednameInput.value === "") {
+        showConfirm("Please fill all the fields.", "Ok", "", () => {});
+        return;
+    }
+
+    CURRENT_CREDENTIALS = await registerKey("/webauthn/register");
+    showConfirm("Confirm this key as encryption method.", "Yes", "", () => {
+        sendEncryptedUmk(CURRENT_CREDENTIALS.credentialId);
+        // TODO : save DOB and full name
+    });
+
+    navigate("/patient/dashboard");
 }

@@ -11,7 +11,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.ModelAndView;
 import ssd.medivault.auth.AuthenticationToken;
 import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.auth.WebAuthnRegistrationService;
@@ -206,7 +205,7 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/newkey/finish")
     @ResponseBody
-    public ModelAndView finishNewKeyRegistration(@RequestParam String credential,
+    public PatientAuthenticator.KeyRecord finishNewKeyRegistration(@RequestParam String credential,
                                                  @RequestParam String credname,
                                                  HttpSession session) {
         // Complete the registration
@@ -220,8 +219,8 @@ public class PatientAuthController {
                 registration.pkc().getResponse(),
                 savedPatient,
                 credname);
-        credentialService.getAuthRepository().save(patientAuth);
-        return new ModelAndView("redirect:/key-management");
+        PatientAuthenticator savedAuth = credentialService.getAuthRepository().save(patientAuth);
+        return savedAuth.toKeyRecord();
     }
 
     /**

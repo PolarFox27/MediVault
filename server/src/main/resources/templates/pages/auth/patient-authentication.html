@@ -1,4 +1,4 @@
-<div th:fragment="frag-patient-authentication" class="centered-container relative fill-width fill-height">
+<div th:fragment="frag-patient-authentication" class="centered-container fill-width fill-height">
 
     <a th:href="@{/welcome}" data-client-nav class="btn-with-icon tooltip-button back-button">
         <img th:src="@{/icons/back.png}" alt="Go Back" class="icon width-60">
@@ -31,7 +31,11 @@
             <!-- Register -->
             <div class="form-panel">
                 <h2 class="margin-bottom-20">Passwordless Registration</h2>
-                <form action="/webauthn/register/start" method="POST" id="registerForm">
+                <form action="/webauthn/register/start" method="POST" id="registerNewKeyForm">
+                    <label for="name" class="font-20 margin-bottom-5">Full Name</label>
+                    <input type="text" id="name" minlength="3" maxlength="32" name="name" placeholder="John Doe" required>
+                    <label for="dob" class="font-20 margin-bottom-5">Date of Birth</label>
+                    <input type="date" id="dob" name="dob" required>
                     <label for="credname" class="font-20 margin-bottom-5">Security Key Name</label>
                     <input type="text" id="credname" minlength="3" maxlength="16" name="credname" placeholder="Blue YubiKey" required>
                     <button type="button" class="text-button text-button-1 fill-width font-20" onclick="register()">

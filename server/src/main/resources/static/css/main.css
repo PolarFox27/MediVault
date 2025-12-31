@@ -132,7 +132,7 @@ main {
     border: none;
 }
 
-.text-button:hover {
+.text-button:hover, .confirm-overlay-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 14px 26px var(--shadow-color);
 }
@@ -187,6 +187,55 @@ h2 {
     text-align: center;
     font-weight: bold;
 }
+
+
+/* ===== Confirmation Overlay ===== */
+#confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.confirm-box {
+    width: 300px;
+    min-height: 150px;
+    padding: 20px;
+    background: var(--background-color-1);
+    border-radius: 25px;
+    border: 1px solid var(--blue-1);
+    box-shadow: 0 25px 50px var(--shadow-color);
+    overflow: hidden;
+    font-size: 20px;
+    text-wrap: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.confirm-overlay-button {
+    min-width: 50px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 10px 20px var(--shadow-color);
+    border: none;
+    background: linear-gradient(135deg, var(--blue-1), var(--blue-2));
+    color: #ffffff;
+}
+
 
 /* ===== Utils ===== */
 

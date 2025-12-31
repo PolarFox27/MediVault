@@ -1,6 +1,7 @@
 let UMK = null;
 let CURRENT_CREDENTIALS = null;
 
+// Retrieve the PRF result from the webauthn credential
 async function generateWebAuthnPRF(credentialId){
     const assertion = await navigator.credentials.get({
         publicKey: {
@@ -15,10 +16,11 @@ async function generateWebAuthnPRF(credentialId){
     return assertion.getClientExtensionResults().prf.results.first;
 }
 
+// Encrypt the UMK for the given credential and PRF value
+// If the UMK is null, a random one is generated
 async function encryptUMK(credentialId, prf) {
     if(UMK === null){
         UMK = crypto.getRandomValues(new Uint8Array(32));
-        console.log("UMK GENERATED: " + uint8ArrayToHex(UMK));
     }
 
     const hkdfKey = await crypto.subtle.importKey(
@@ -54,7 +56,7 @@ async function encryptUMK(credentialId, prf) {
     };
 }
 
-// --- Decrypt UMK (login time) ---
+// Decrypt the UMK based on the PRF value
 async function decryptUMK({ encryptedUmk, iv, credentialId }, prf) {
     const hkdfKey = await crypto.subtle.importKey(
         "raw",
@@ -86,6 +88,7 @@ async function decryptUMK({ encryptedUmk, iv, credentialId }, prf) {
     );
 }
 
+// Encrypt and send the UMK to the server for the given credential
 async function sendEncryptedUmk(credentialId) {
 
     const prf = await generateWebAuthnPRF(hexToUint8Array(credentialId));
@@ -100,6 +103,7 @@ async function sendEncryptedUmk(credentialId) {
     });
 }
 
+// Retrieve the encrypted UMK from the server and decrypt it
 async function fetchEncryptedUmk(prf) {
     const encryptedUmkResponse = await fetch("/umk/get", {
         method: "GET",

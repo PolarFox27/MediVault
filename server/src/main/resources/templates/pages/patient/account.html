@@ -34,13 +34,12 @@
                 <div th:each="key : ${keys}" class="centered-container gap-25 key-row space-between fill-width">
                     <div class="centered-container gap-15">
                         <div th:text="${key.name}" class="font-20 font-bold"></div>
-                        <div th:text="${'<' + key.credentialId.substring(0, 20) + '...>'}" class="font-20"></div>
                     </div>
 
                     <div class="centered-container gap-50">
                         <button class="btn-with-icon tooltip-button">
-                            <span th:text="${'' + key.count}" class="font-bold font-20"></span>
-                            <span th:text="${'Signature count: ' + key.count}" class="tooltip"></span>
+                            <div th:text="${'<' + key.credentialId.substring(0, 32) + '...>'}" class="font-20"></div>
+                            <span class="tooltip">Unique Key Identifier</span>
                         </button>
 
                         <button th:if="${key.credentialId != currentCred}" class="delete-btn btn-with-icon tooltip-button"
