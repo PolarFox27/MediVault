@@ -1,0 +1,18 @@
+/* ===== Main Content ===== */
+.main-content {
+    max-width: 800px;
+    margin: 80px auto;
+    padding: 0 24px;
+}
+
+.main-content h1 {
+    font-size: 28px;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.main-content p {
+    font-size: 15px;
+    color: #4b5563;
+    line-height: 1.6;
+}

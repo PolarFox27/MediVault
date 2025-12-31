@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<link rel="icon" type="image/png" th:href="@{/icons/logo.png}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVault</title>
+
+    <!-- CSS Stylesheets -->
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/patient-authentication.css}">
+    <link rel="stylesheet" th:href="@{/css/patient-account.css}">
+    <link rel="stylesheet" th:href="@{/css/patient-dashboard.css}">
+
+    <!-- JS Scripts -->
+    <script th:src="@{/javascript/client-nav.js}" defer></script>
+    <script th:src="@{/javascript/confirmation.js}" defer></script>
+    <script th:src="@{/javascript/base64js.min.js}" defer></script>
+    <script th:src="@{/javascript/custom.js}" defer></script>
+    <script th:src="@{/javascript/umk-encryption.js}" defer></script>
+    <script th:src="@{/javascript/patient-authentication.js}" defer></script>
+    <script th:src="@{/javascript/register-new-key.js}" defer></script>
+</head>
+
+<body>
+
+<!-- Header -->
+<header id="app-header"></header>
+
+<!-- Main Content -->
+<main class="centered-container">
+    <div id="app-content" class="centered-container fill-height fill-width"></div>
+
+    <div id="confirm-overlay" class="hidden">
+        <div class="confirm-box">
+            <p id="confirm-message">Are you sure?</p>
+
+            <div class="confirm-actions">
+                <button id="cancel-button" class="confirm-overlay-button">Cancel</button>
+                <button id="confirm-button" class="confirm-overlay-button">Verify Key</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

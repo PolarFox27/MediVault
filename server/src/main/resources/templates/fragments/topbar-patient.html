@@ -1,0 +1,30 @@
+<div th:fragment="frag-topbar-patient" class="topbar" id="topbar">
+    <div class="centered-container gap-15">
+        <img th:src="@{/icons/logo.png}" alt="MediVault" class="width-60"/>
+        <span class="font-20"> Patient ??? (TODO)</span>
+    </div>
+
+    <!-- Right: Buttons -->
+    <div class="centered-container gap-15">
+        <a th:href="@{/patient/dashboard}" data-client-nav class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/home.png}" alt="Dashboard" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Dashboard</span>
+        </a>
+        <a th:href="@{/patient/doctor-list}" data-client-nav class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/doctors.png}" alt="Doctors" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Appointed Doctors</span>
+        </a>
+        <a th:href="@{/patient/pending-changes}" data-client-nav class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/changes.png}" alt="Changes" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Pending Changes by Doctors</span>
+        </a>
+        <a th:href="@{/patient/account}" data-client-nav class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/account.png}" alt="Keys" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Manage Account</span>
+        </a>
+        <a href="/logout" class="btn-with-icon tooltip-button">
+            <img th:src="@{/icons/logout.png}" alt="Logout" class="icon width-40">
+            <span class="tooltip tooltip-bottom">Logout</span>
+        </a>
+    </div>
+</div>
