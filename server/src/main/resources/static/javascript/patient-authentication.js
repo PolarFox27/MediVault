@@ -64,6 +64,7 @@ async function login() {
 
     CURRENT_CREDENTIALS = await initialCheckStatus(newResponse);
     await fetchEncryptedUmk(prf);
+    await fetchPersonalDetails();
     navigate("/patient/dashboard");
 }
 
@@ -133,9 +134,10 @@ async function register() {
 
     CURRENT_CREDENTIALS = await registerKey("/webauthn/register");
     showConfirm("Confirm this key as encryption method.", "Yes", "", () => {
-        sendEncryptedUmk(CURRENT_CREDENTIALS.credentialId);
-        // TODO : save DOB and full name
+        sendEncryptedUmk(CURRENT_CREDENTIALS.credentialId).then(() => {
+            savePersonalDetails().then(() => {
+                navigate("/patient/dashboard");
+            });
+        })
     });
-
-    navigate("/patient/dashboard");
 }

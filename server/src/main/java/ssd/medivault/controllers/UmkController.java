@@ -5,7 +5,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ssd.medivault.auth.WebAuthnCredentialService;
+import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
+import ssd.medivault.entities.PatientPrivateDetails;
 
 import java.util.Optional;
 
@@ -25,7 +27,7 @@ public class UmkController {
      * @param encryptedUmk the object storing the encrypted UMK
      * @param auth the authentication token
      */
-    @PostMapping("/umk/set")
+    @PostMapping("/patient/umk")
     public void setPatientUmk(@RequestBody PatientAuthenticator.EncryptedUmk encryptedUmk, Authentication auth) {
 
         if(!credentialService.areCredentialsFromSamePatient(String.valueOf(auth.getCredentials()),
@@ -47,13 +49,13 @@ public class UmkController {
 
     /**
      * This endpoint is used by the patient to retrieve its encrypted UMK.
-     * It fetches the version corresponding to the current authentication key used by the patient
+     * It fetches the encrypted version corresponding to the current authentication key used by the patient
      * so that the patient can decrypt their UMK client-side.
      *
      * @param auth the authentication token
-     * @return the encrypted Umk object.
+     * @return the encrypted UMK object
      */
-    @GetMapping("/umk/get")
+    @GetMapping("/patient/umk")
     @ResponseBody
     public PatientAuthenticator.EncryptedUmk getPatientUmk(Authentication auth) {
         Optional<PatientAuthenticator> authenticator = this.credentialService.getAuthRepository()
@@ -63,6 +65,47 @@ public class UmkController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
         return authenticator.get().getUmk();
+    }
+
+    /**
+     * This endpoint is called to update / set the private details of a patient.
+     * This includes the date of birth and full name
+     *
+     * @param encryptedDetails the object storing the encrypted patient private details
+     * @param auth the authentication token
+     */
+    @PostMapping("/patient/details")
+    public void setPatientDetails(@RequestBody PatientPrivateDetails.PatientPrivateDetailsRecord encryptedDetails,
+                                  Authentication auth) {
+
+        Optional<Patient> patient = this.credentialService.getPatientRepository()
+                .findByUsername(String.valueOf(auth.getPrincipal()));
+
+        if(patient.isEmpty())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+        if (!credentialService.setPrivateDetails(encryptedDetails, patient.get())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * This endpoint is used by the patient to retrieve their encrypted private details.
+     * The patient can then decrypt them using their UMK client-side
+     *
+     * @param auth the authentication token
+     * @return the encrypted patient details
+     */
+    @GetMapping("/patient/details")
+    @ResponseBody
+    public PatientPrivateDetails.PatientPrivateDetailsRecord getPatientDetails(Authentication auth) {
+        Optional<Patient> patient = this.credentialService.getPatientRepository()
+                .findByUsername(String.valueOf(auth.getPrincipal()));
+
+        if(patient.isEmpty())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+        return patient.get().getDetails().toRecord();
     }
 }
 

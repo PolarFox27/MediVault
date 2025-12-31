@@ -30,6 +30,14 @@ function uint8ArrayToHex(bytes) {
     return hex;
 }
 
+function stringToUint8Array(string) {
+    return new TextEncoder().encode(string);
+}
+
+function uint8ArrayToString(array) {
+    return new TextDecoder("utf-8").decode(array);
+}
+
 
 class WebAuthServerError extends Error {
     constructor(foo = 'bar', ...params) {
@@ -39,9 +47,11 @@ class WebAuthServerError extends Error {
       this.date = new Date()
     }
 }
+
 function throwError(response) {
     throw new WebAuthServerError("Error from client", response.body);
 }
+
 function checkStatus(response) {
     if (response.status !== 200) {
         throwError(response);
@@ -49,18 +59,12 @@ function checkStatus(response) {
         return response;
     }
 }
+
 function initialCheckStatus(response) {
     checkStatus(response);
     return response.json();
 }
 
-function followRedirect(response) {
-    if (response.status === 200) {
-        window.location.href = response.url;
-    } else {
-        throwError(response);
-    }
-}
 function displayError(error) {
     console.error(error);
 }

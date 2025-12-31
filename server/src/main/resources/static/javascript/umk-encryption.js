@@ -94,7 +94,7 @@ async function sendEncryptedUmk(credentialId) {
     const prf = await generateWebAuthnPRF(hexToUint8Array(credentialId));
 
     const encryptedUmk = await encryptUMK(credentialId, prf);
-    await fetch("/umk/set", {
+    await fetch("/patient/umk", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -105,7 +105,7 @@ async function sendEncryptedUmk(credentialId) {
 
 // Retrieve the encrypted UMK from the server and decrypt it
 async function fetchEncryptedUmk(prf) {
-    const encryptedUmkResponse = await fetch("/umk/get", {
+    const encryptedUmkResponse = await fetch("/patient/umk", {
         method: "GET",
         credentials: "same-origin",
         headers: {
@@ -114,4 +114,34 @@ async function fetchEncryptedUmk(prf) {
     });
     const encryptedUmk = await encryptedUmkResponse.json();
     await decryptUMK(encryptedUmk, prf);
+}
+
+async function encrypt(data) {
+    const key = await crypto.subtle.importKey(
+        "raw",
+        UMK,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt", "decrypt"]
+    );
+
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encryptedData = new Uint8Array(
+        await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data)
+    );
+    return {encryptedData, iv};
+}
+
+async function decrypt(encryptedData, iv) {
+    const key = await crypto.subtle.importKey(
+        "raw",
+        UMK,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt", "decrypt"]
+    );
+
+    return new Uint8Array(
+        await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encryptedData)
+    );
 }

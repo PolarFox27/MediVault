@@ -136,8 +136,6 @@ public class PageController {
         if(patient.isPresent()) {
             model.addAttribute("username", patient.get().getUsername());
             model.addAttribute("currentCred", authentication.getCredentials());
-            model.addAttribute("encryptedName", EncodingUtils.toHex(patient.get().getEncryptedName()));
-            model.addAttribute("encryptedDOB", EncodingUtils.toHex(patient.get().getEncryptedDOB()));
         }
     }
 }

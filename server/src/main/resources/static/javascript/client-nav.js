@@ -29,6 +29,7 @@ function navigate(url, callback = () => {}) {
             .then((text) => {
                 app_header.innerHTML = text;
                 app_header.style.display = "block";
+                loadWelcomeMessage();
             })
     }
     else {
@@ -59,3 +60,9 @@ document.addEventListener("DOMContentLoaded", () => {
         navigate(location.pathname);
     }
 });
+
+function navigateToPatientAccountManagement(){
+    navigate("/patient/account", () => {
+        loadPersonalDetails();
+    });
+}
