@@ -16,10 +16,16 @@ public class LogChainService {
     }
 
     public synchronized void appendRaw(String raw) {
-        long ts = System.currentTimeMillis();
         String payload = raw + "|" + lastHash;
         String entryHash = hmac.hmac(payload);
         String[] parts = raw.split("\\|", 5); // timestamp|actor|action|target|extraData
+        long ts;
+        try {
+            ts = Long.parseLong(parts[0]);
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid timestamp, using server time");
+            ts = System.currentTimeMillis();
+        }
         LogEntry entry = new LogEntry(ts, parts[1], parts[2], parts[3], parts[4], lastHash, entryHash);
         store.append(entry);
         lastHash = entryHash;
