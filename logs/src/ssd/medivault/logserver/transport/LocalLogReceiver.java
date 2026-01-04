@@ -2,40 +2,42 @@ package ssd.medivault.logserver.transport;
 
 import ssd.medivault.logserver.service.LogChainService;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.UnixDomainSocketAddress;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.nio.file.Path;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class LocalLogReceiver {
-    private final Path socketPath;
+
+    private final int port;
     private final LogChainService chainService;
 
-    public LocalLogReceiver(Path socketPath, LogChainService chainService) {
-        this.socketPath = socketPath;
+    public LocalLogReceiver(int port, LogChainService chainService) {
+        this.port = port;
         this.chainService = chainService;
     }
 
-    public void start() throws Exception {
-        UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socketPath);
-        try (ServerSocketChannel server = ServerSocketChannel.open()) {
-            server.bind(address);
+    public void start() throws IOException {
+        try (ServerSocket server = new ServerSocket(port)) {
+            System.out.println("Log server listening on port " + port);
             while (true) {
-                SocketChannel client = server.accept();
+                Socket client = server.accept();
                 handleClient(client);
             }
         }
     }
 
-    private void handleClient(SocketChannel client) throws Exception {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(client.socket().getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                chainService.appendRaw(line);
+    private void handleClient(Socket client) {
+        new Thread(() -> {
+            try (BufferedReader reader =
+                     new BufferedReader(new InputStreamReader(client.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    chainService.appendRaw(line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        }
+        }).start();
     }
 }
 

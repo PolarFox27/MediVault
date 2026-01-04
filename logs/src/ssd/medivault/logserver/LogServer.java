@@ -7,7 +7,7 @@ import ssd.medivault.logserver.transport.LocalLogReceiver;
 
 import java.nio.file.Path;
 
-public class LogServerMain {
+public class LogServer {
 
     public static void main(String[] args) throws Exception {
         Path logFile = Path.of("audit.log");
@@ -17,9 +17,11 @@ public class LogServerMain {
         AppendOnlyLogStore store = new AppendOnlyLogStore(logFile);
         LogChainService chainService = new LogChainService(store, hmacService);
 
-        LocalLogReceiver receiver = new LocalLogReceiver(socketPath, chainService);
+        int port = 5555; // local-only
 
+        LocalLogReceiver receiver = new LocalLogReceiver(port, chainService);
         receiver.start(); // blocking
+
     }
 }
 
