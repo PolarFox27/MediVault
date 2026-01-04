@@ -36,8 +36,8 @@ public class AuditLogger {
         String logLine = String.format("%d|%s|%s|%s|%s",
                 timestamp,
                 actor != null ? actor : "SERVER",
-                target != null ? target : "-",
                 action != null ? action : "-",
+                target != null ? target : "-",
                 extraData != null ? extraData : "-");
 
         try {

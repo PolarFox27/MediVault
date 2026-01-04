@@ -17,9 +17,10 @@ public class LogChainService {
 
     public synchronized void appendRaw(String raw) {
         long ts = System.currentTimeMillis();
-        String payload = ts + "|" + raw + "|" + lastHash;
+        String payload = raw + "|" + lastHash;
         String entryHash = hmac.hmac(payload);
-        LogEntry entry = new LogEntry(ts, "SERVER", raw, "-", lastHash, entryHash);
+        String[] parts = raw.split("\\|", 5); // timestamp|actor|action|target|extraData
+        LogEntry entry = new LogEntry(ts, parts[1], parts[2], parts[3], parts[4], lastHash, entryHash);
         store.append(entry);
         lastHash = entryHash;
     }

@@ -28,8 +28,7 @@ public class LocalLogReceiver {
 
     private void handleClient(Socket client) {
         new Thread(() -> {
-            try (BufferedReader reader =
-                     new BufferedReader(new InputStreamReader(client.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     chainService.appendRaw(line);
