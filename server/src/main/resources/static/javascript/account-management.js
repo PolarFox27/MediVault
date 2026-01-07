@@ -4,9 +4,8 @@ let FULL_NAME = null;
 
 // Show/Hide the new key registration box
 function toggleRegistration() {
-    const temp = document.getElementById('registrationBox').style.display;
-    document.getElementById('registrationBox').style.display = document.getElementById('keyListBox').style.display;
-    document.getElementById('keyListBox').style.display = temp;
+    document.getElementById('registrationBox').classList.toggle("hidden");
+    document.getElementById('keyListBox').classList.toggle("hidden");
 }
 
 // Call the DELETE key endpoint to forget the authentication key provided
@@ -75,6 +74,7 @@ async function savePersonalDetails() {
     checkStatus(response);
     DOB = dobInput.value;
     FULL_NAME = nameInput.value;
+    loadWelcomeMessage();
 }
 
 async function fetchPersonalDetails() {

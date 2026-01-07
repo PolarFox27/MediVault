@@ -80,7 +80,7 @@ public class WebAuthnRegistrationService {
         }
     }
 
-    public RegistrationRecord completeRegistration(HttpSession session, String credential, String credentialName){
+    public RegistrationRecord completeRegistration(HttpSession session, String credential){
         try {
             // Retrieve the patient object and registration info from the HTTP session
             Patient patient = (Patient) session.getAttribute("registrationUser");

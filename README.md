@@ -1,5 +1,19 @@
 # ProjectSSD
 
+## I. Members
+
+## II. Project Structure
+
+## III. Security
+
+##### HTTPS Certificate
+
+The development certificate should be stored in `/server/src/main/resources` as a .p12 file. 
+The development password to open this file is `password`. This must be changed for production.
+
+```
+keytool -genkeypair -alias medivault -keyalg RSA -keysize 3072 -storetype PKCS12 -keystore medivault.p12 -validity 3650
+```
 
 
 ## Getting started

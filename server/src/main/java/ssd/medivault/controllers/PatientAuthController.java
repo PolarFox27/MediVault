@@ -79,8 +79,7 @@ public class PatientAuthController {
                                                                     HttpServletRequest request) {
         // Complete the registration
         WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
-                credential,
-                credname);
+                credential);
 
         // Store the patient and their authenticator in the database
         Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());
@@ -90,7 +89,7 @@ public class PatientAuthController {
                 credname);
         credentialService.getAuthRepository().save(patientAuth);
 
-        // Authenticate the patient and redirect to the dashboard
+        // Authenticate the patient
         AuthenticationToken.authenticatePatient(savedPatient.getUsername(),
                 EncodingUtils.toHex(patientAuth.getCredentialId()),
                 request);
@@ -210,8 +209,7 @@ public class PatientAuthController {
                                                  HttpSession session) {
         // Complete the registration
         WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
-                credential,
-                credname);
+                credential);
 
         // Store the patient and their authenticator in the database
         Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());
