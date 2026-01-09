@@ -1,7 +1,5 @@
-<div th:fragment="frag-patient-dashboard" class="main-content relative">
-    <h1>Welcome to MediVault</h1>
-    <p>
-        Your medical files are protected with
-        <strong>end-to-end encryption</strong> and accessible only by you.
-    </p>
+<div th:fragment="frag-patient-dashboard" class="main-content relative fill-width">
+    <button class="text-button text-button-1 margin-top-30 margin-bottom-30" onclick="openFileInput()">Upload New File</button>
+    <input id="uploadFileInput" type="file" hidden />
+    <div class="centered-container vertical-flex fill-width" id="files-box"></div>
 </div>

@@ -15,7 +15,7 @@ function deleteKey(credentialId){
         credentials: "same-origin"
     })
         .then(() => {
-            navigate("/patient/account");
+            navigate("/patient/account", () => {}, false);
         })
         .catch((error) => {
             displayError(error);
@@ -34,13 +34,13 @@ document.addEventListener("click", e => {
 
 
 // Performs the full key registration procedure based on the given form data (the credential name)
-async function accountManagement() {
+async function registerNewKey() {
     const newCredentials = await registerKey("/webauthn/newkey");
-    console.log(newCredentials);
+
     showConfirm("Confirm this security key as an additional encryption method ?", "Yes", "", () => {
         sendEncryptedUmk(newCredentials.credentialId);
     })
-    navigate("/patient/account");
+    navigate("/patient/account", () => {}, false);
 }
 
 // Save the full name and DOB of the patient
@@ -74,7 +74,6 @@ async function savePersonalDetails() {
     checkStatus(response);
     DOB = dobInput.value;
     FULL_NAME = nameInput.value;
-    loadWelcomeMessage();
 }
 
 async function fetchPersonalDetails() {

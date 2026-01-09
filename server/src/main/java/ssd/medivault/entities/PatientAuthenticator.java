@@ -78,7 +78,7 @@ public class PatientAuthenticator {
         this.iv = new byte[]{};
     }
 
-    public record KeyRecord(String name, String credentialId, String publicKey, long count) {}
+    public record KeyRecord(String name, String credentialId, String publicKey) {}
 
     /**
      * Converts this authentication into a record storing the key details.
@@ -87,8 +87,7 @@ public class PatientAuthenticator {
      * @return the converted record.
      */
     public KeyRecord toKeyRecord(){
-        return new KeyRecord(this.name, EncodingUtils.toHex(this.credentialId),
-                EncodingUtils.toHex(this.publicKey), this.count);
+        return new KeyRecord(this.name, EncodingUtils.toHex(this.credentialId), EncodingUtils.toHex(this.publicKey));
     }
 
     public record EncryptedUmk(String encryptedUmk, String iv, String credentialId) {}

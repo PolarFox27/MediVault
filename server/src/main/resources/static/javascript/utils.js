@@ -38,6 +38,10 @@ function uint8ArrayToString(array) {
     return new TextDecoder("utf-8").decode(array);
 }
 
+function isEmptyUint8Array(value) {
+    return value instanceof Uint8Array && value.length === 0;
+}
+
 
 class WebAuthServerError extends Error {
     constructor(foo = 'bar', ...params) {

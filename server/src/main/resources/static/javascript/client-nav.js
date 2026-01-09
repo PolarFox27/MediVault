@@ -1,6 +1,12 @@
+const DEFAULT_CALLBACKS = {
+    "/patient/dashboard": () => fetchAndRenderFiles(),
+    "/patient/account": () => loadPersonalDetails()
+}
+
+
 // Function loading the correct page fragment when navigating to a URL on the site
 // It handles the browser history to prevent bugs with the back and forward buttons
-function navigate(url, callback = () => {}) {
+function navigate(url, callback = () => {}, defaultCallback = true) {
     const app_content = document.getElementById("app-content");
     const app_header = document.getElementById("app-header");
     app_content.innerHTML = "<p>Loading...</p>";
@@ -15,6 +21,9 @@ function navigate(url, callback = () => {}) {
         .then((text) => {
             app_content.innerHTML = text;
             history.pushState(null, "", url);
+            if(defaultCallback) {
+                DEFAULT_CALLBACKS[url]?.();
+            }
             callback();
         });
 
@@ -60,9 +69,3 @@ document.addEventListener("DOMContentLoaded", () => {
         navigate(location.pathname);
     }
 });
-
-function navigateToPatientAccountManagement(){
-    navigate("/patient/account", () => {
-        loadPersonalDetails();
-    });
-}

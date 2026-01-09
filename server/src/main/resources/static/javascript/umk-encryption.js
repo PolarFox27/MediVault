@@ -1,5 +1,9 @@
-let UMK = null;
-let CURRENT_CREDENTIALS = null;
+let UMK = new Uint8Array(0);
+let CURRENT_CREDENTIALS = {
+    name: "",
+    credentialId: "",
+    publicKey: ""
+};
 
 // Retrieve the PRF result from the webauthn credential
 async function generateWebAuthnPRF(credentialId){
@@ -19,7 +23,7 @@ async function generateWebAuthnPRF(credentialId){
 // Encrypt the UMK for the given credential and PRF value
 // If the UMK is null, a random one is generated
 async function encryptUMK(credentialId, prf) {
-    if(UMK === null){
+    if(isEmptyUint8Array(UMK)){
         UMK = crypto.getRandomValues(new Uint8Array(32));
     }
 
@@ -116,10 +120,10 @@ async function fetchEncryptedUmk(prf) {
     await decryptUMK(encryptedUmk, prf);
 }
 
-async function encrypt(data) {
+async function encrypt(data, rawKey = UMK) {
     const key = await crypto.subtle.importKey(
         "raw",
-        UMK,
+        rawKey,
         { name: "AES-GCM" },
         false,
         ["encrypt", "decrypt"]
@@ -132,10 +136,10 @@ async function encrypt(data) {
     return {encryptedData, iv};
 }
 
-async function decrypt(encryptedData, iv) {
+async function decrypt(encryptedData, iv, rawKey = UMK) {
     const key = await crypto.subtle.importKey(
         "raw",
-        UMK,
+        rawKey,
         { name: "AES-GCM" },
         false,
         ["encrypt", "decrypt"]

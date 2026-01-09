@@ -18,10 +18,10 @@
             <img th:src="@{/icons/changes.png}" alt="Changes" class="icon width-40">
             <span class="tooltip tooltip-bottom">Pending Changes by Doctors</span>
         </a>
-        <button onclick="navigateToPatientAccountManagement()" class="btn-with-icon tooltip-button">
+        <a th:href="@{/patient/account}" class="btn-with-icon tooltip-button">
             <img th:src="@{/icons/account.png}" alt="Account" class="icon width-40">
             <span class="tooltip tooltip-bottom">Manage Account</span>
-        </button>
+        </a>
         <a href="/logout" class="btn-with-icon tooltip-button">
             <img th:src="@{/icons/logout.png}" alt="Logout" class="icon width-40">
             <span class="tooltip tooltip-bottom">Logout</span>
