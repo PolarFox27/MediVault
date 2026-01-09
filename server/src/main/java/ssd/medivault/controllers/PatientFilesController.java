@@ -1,19 +1,24 @@
 package ssd.medivault.controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import ssd.medivault.auth.AuthenticationToken;
 import ssd.medivault.data.EncryptedFileRepository;
 import ssd.medivault.data.PatientRepository;
 import ssd.medivault.entities.EncryptedFile;
 import ssd.medivault.entities.Patient;
+import ssd.medivault.utils.EncodingUtils;
 
 import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -98,10 +103,13 @@ public class PatientFilesController {
      *
      * @param id the file id
      * @param authentication the patient authentication token
-     * @return the encrypted file object
+     * @return the encrypted file object as an octet stream for best efficiency
      */
-    @GetMapping("/patient/files/{id}")
-    public EncryptedFile.EncryptedFileDTO downloadFile(@PathVariable Long id, Authentication authentication) {
+    @GetMapping(
+            value = "/patient/files/{id}",
+            produces = MediaType.APPLICATION_OCTET_STREAM_VALUE
+    )
+    public ResponseEntity<StreamingResponseBody> downloadFile(@PathVariable Long id, Authentication authentication) {
 
         Patient patient = AuthenticationToken.extractPatient(authentication, patientRepository);
 
@@ -111,7 +119,17 @@ public class PatientFilesController {
         if (!f.getPatient().equals(patient))
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
 
-        return EncryptedFile.EncryptedFileDTO.from(f);
+        StreamingResponseBody stream = outputStream -> {
+            outputStream.write(f.getData());     // encrypted bytes
+            outputStream.flush();
+        };
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"encrypted.bin\"")
+                .header("X-File-IV", EncodingUtils.toHex(f.getDataIv()))
+                .contentLength(f.getData().length)
+                .body(stream);
     }
 
     /**

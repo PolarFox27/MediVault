@@ -1,6 +1,9 @@
 <div th:fragment="frag-patient-dashboard" class="main-content relative fill-width">
     <div class="centered-container">
-        <button class="text-button text-button-1 margin-top-30 margin-bottom-30 font-20" onclick="openFileInput()">Upload New File</button>
+        <button class="text-button text-button-1 margin-top-30 margin-bottom-30 font-20 tooltip-button" onclick="openFileInput()">
+            Upload New File
+            <span class="tooltip">Maximum 20MB</span>
+        </button>
     </div>
 
     <input id="uploadFileInput" type="file" hidden />

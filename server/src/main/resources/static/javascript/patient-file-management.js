@@ -5,7 +5,7 @@ function renderFile(file) {
 
     // Store ID
     div.dataset.fileId = file.id;
-    div.dataset.fek = file.fek;
+    div.dataset.fek = uint8ArrayToHex(file.fek);
     div.dataset.filename = file.filename;
 
     // Add inner HTML content
@@ -36,10 +36,11 @@ function renderFile(file) {
     div.addEventListener("click", (e) => {
 
         const fileId = div.dataset.fileId;
+        const filename = div.dataset.filename;
+        const fek = hexToUint8Array(div.dataset.fek);
 
         if (e.target.closest(".file-download-button")) {
-            console.log("Download clicked for file:", fileId);
-            // TODO: Download File
+            downloadFile(fileId, filename, fek).then(() => {});
         }
 
         else if (e.target.closest(".file-delete-button")) {
@@ -101,34 +102,64 @@ function openFileInput(){
 
         input.value = "";
 
-        const plaintextFek = crypto.getRandomValues(new Uint8Array(32));
-        const fek = await encrypt(plaintextFek);
-
-        const fileBytes = new Uint8Array(await file.arrayBuffer());
-        const data = await encrypt(fileBytes, plaintextFek);
-        const filename = await encrypt(stringToUint8Array(file.name), plaintextFek);
-
-
         const existingFile = document.getElementById("files-box").querySelector(`[data-filename="${CSS.escape(file.name)}"]`);
         const id = existingFile ? existingFile.dataset.fileId : 0;
 
-        const form = new FormData();
-        form.append("data", new Blob([data.encryptedData]));
-        form.append("dataIv", new Blob([data.iv]));
-        form.append("filename", new Blob([filename.encryptedData]));
-        form.append("filenameIv", new Blob([filename.iv]));
-        form.append("fek", new Blob([fek.encryptedData]));
-        form.append("fekIv", new Blob([fek.iv]));
+        const functionEnd = async () => {
+            const plaintextFek = crypto.getRandomValues(new Uint8Array(32));
+            const fek = await encrypt(plaintextFek);
 
-        const response = await fetch("/patient/files?id=" + id, {
-            method: "POST",
-            credentials: "same-origin",
-            body: form
-        });
+            const fileBytes = new Uint8Array(await file.arrayBuffer());
+            const data = await encrypt(fileBytes, plaintextFek);
+            const filename = await encrypt(stringToUint8Array(file.name), plaintextFek);
 
-        initialCheckStatus(response);
-        await fetchAndRenderFiles();
+
+            const form = new FormData();
+            form.append("data", new Blob([data.encryptedData]));
+            form.append("dataIv", new Blob([data.iv]));
+            form.append("filename", new Blob([filename.encryptedData]));
+            form.append("filenameIv", new Blob([filename.iv]));
+            form.append("fek", new Blob([fek.encryptedData]));
+            form.append("fekIv", new Blob([fek.iv]));
+
+            const response = await fetch("/patient/files?id=" + id, {
+                method: "POST",
+                credentials: "same-origin",
+                body: form
+            });
+
+            initialCheckStatus(response);
+            await fetchAndRenderFiles();
+        };
+
+        if(id === 0) {
+            await functionEnd();
+        }
+        else {
+            showConfirm("A file with the same name already exists. Du you want to overwrite it ?", "Yes", "No", functionEnd);
+        }
     }
-
     input.click();
+}
+
+async function downloadFile(fileId, filename, fek){
+    const response = await fetch(`/patient/files/${fileId}`, {
+        method: "GET",
+        credentials: "same-origin"
+    });
+
+    checkStatus(response);
+    const iv = hexToUint8Array(response.headers.get("X-File-IV"));
+    const encryptedData = new Uint8Array(await response.arrayBuffer());
+    const decryptedData = await decrypt(encryptedData, iv, fek);
+
+    const blob = new Blob([decryptedData]);
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
 }
