@@ -4,9 +4,8 @@ let FULL_NAME = null;
 
 // Show/Hide the new key registration box
 function toggleRegistration() {
-    const temp = document.getElementById('registrationBox').style.display;
-    document.getElementById('registrationBox').style.display = document.getElementById('keyListBox').style.display;
-    document.getElementById('keyListBox').style.display = temp;
+    document.getElementById('registrationBox').classList.toggle("hidden");
+    document.getElementById('keyListBox').classList.toggle("hidden");
 }
 
 // Call the DELETE key endpoint to forget the authentication key provided
@@ -16,7 +15,7 @@ function deleteKey(credentialId){
         credentials: "same-origin"
     })
         .then(() => {
-            navigate("/patient/account");
+            navigate("/patient/account", () => {}, false);
         })
         .catch((error) => {
             displayError(error);
@@ -25,7 +24,7 @@ function deleteKey(credentialId){
 
 // Bind the deleteKey function to the delete buttons in the key list
 document.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-btn");
+    const btn = e.target.closest(".key-delete-button");
     if (!btn) return;
 
     showConfirm("Are you sure you want to delete this key?", "Yes", "No", () => {
@@ -35,13 +34,13 @@ document.addEventListener("click", e => {
 
 
 // Performs the full key registration procedure based on the given form data (the credential name)
-async function accountManagement() {
+async function registerNewKey() {
     const newCredentials = await registerKey("/webauthn/newkey");
-    console.log(newCredentials);
+
     showConfirm("Confirm this security key as an additional encryption method ?", "Yes", "", () => {
         sendEncryptedUmk(newCredentials.credentialId);
     })
-    navigate("/patient/account");
+    navigate("/patient/account", () => {}, false);
 }
 
 // Save the full name and DOB of the patient

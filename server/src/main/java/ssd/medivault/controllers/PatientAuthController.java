@@ -6,6 +6,7 @@ import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -19,19 +20,14 @@ import ssd.medivault.entities.PatientAuthenticator;
 import ssd.medivault.utils.EncodingUtils;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.Random;
 
 @Controller
+@RequiredArgsConstructor
 public class PatientAuthController {
 
     private final WebAuthnCredentialService credentialService;
     private final WebAuthnRegistrationService registrationService;
-
-    PatientAuthController(WebAuthnCredentialService credentialService, WebAuthnRegistrationService registrationService) {
-        this.credentialService = credentialService;
-        this.registrationService = registrationService;
-    }
 
     /**
      * This function is the start endpoint of the WebAuthn registration protocol.
@@ -52,7 +48,7 @@ public class PatientAuthController {
         // Create a user identity object and a Patient object
         UserIdentity userIdentity = UserIdentity.builder()
                 .name(id.getHex().substring(0, 16))
-                .displayName("Patient <" + id.getHex().substring(0, 16) + ">")
+                .displayName(id.getHex().substring(0, 16))
                 .id(id)
                 .build();
         Patient patient = new Patient(userIdentity);
@@ -79,8 +75,7 @@ public class PatientAuthController {
                                                                     HttpServletRequest request) {
         // Complete the registration
         WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
-                credential,
-                credname);
+                credential);
 
         // Store the patient and their authenticator in the database
         Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());
@@ -90,7 +85,7 @@ public class PatientAuthController {
                 credname);
         credentialService.getAuthRepository().save(patientAuth);
 
-        // Authenticate the patient and redirect to the dashboard
+        // Authenticate the patient
         AuthenticationToken.authenticatePatient(savedPatient.getUsername(),
                 EncodingUtils.toHex(patientAuth.getCredentialId()),
                 request);
@@ -182,15 +177,9 @@ public class PatientAuthController {
     @ResponseBody
     public String startNewKeyRegistration(HttpSession session, Authentication auth) {
 
-        String username = String.valueOf(auth.getPrincipal());
+        Patient patient = AuthenticationToken.extractPatient(auth, registrationService.getPatientRepository());
 
-        Optional<Patient> patient = credentialService.getPatientRepository().findByUsername(username);
-
-        if(patient.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "The provided username does not exist.");
-        }
-
-        return registrationService.createJsonCredentialRegistrationOptions(patient.get(), session);
+        return registrationService.createJsonCredentialRegistrationOptions(patient, session);
     }
 
     /**
@@ -210,8 +199,7 @@ public class PatientAuthController {
                                                  HttpSession session) {
         // Complete the registration
         WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
-                credential,
-                credname);
+                credential);
 
         // Store the patient and their authenticator in the database
         Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());

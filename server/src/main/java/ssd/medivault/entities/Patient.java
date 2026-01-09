@@ -33,7 +33,7 @@ public class Patient {
     public UserIdentity toUserIdentity() {
         return UserIdentity.builder()
                 .name(getUsername())
-                .displayName(getUsername())
+                .displayName("Medivault Patient <" + getUsername() + ">")
                 .id(new ByteArray(this.handle))
                 .build();
     }

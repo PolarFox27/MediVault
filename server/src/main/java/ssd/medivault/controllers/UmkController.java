@@ -1,9 +1,11 @@
 package ssd.medivault.controllers;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import ssd.medivault.auth.AuthenticationToken;
 import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
@@ -12,13 +14,10 @@ import ssd.medivault.entities.PatientPrivateDetails;
 import java.util.Optional;
 
 @RestController
+@RequiredArgsConstructor
 public class UmkController {
 
     private final WebAuthnCredentialService credentialService;
-
-    UmkController(WebAuthnCredentialService credentialService) {
-        this.credentialService = credentialService;
-    }
 
     /**
      * This endpoint is designed to be called right after the registration procedure of a new security key.
@@ -78,13 +77,9 @@ public class UmkController {
     public void setPatientDetails(@RequestBody PatientPrivateDetails.PatientPrivateDetailsRecord encryptedDetails,
                                   Authentication auth) {
 
-        Optional<Patient> patient = this.credentialService.getPatientRepository()
-                .findByUsername(String.valueOf(auth.getPrincipal()));
+        Patient patient = AuthenticationToken.extractPatient(auth, credentialService.getPatientRepository());
 
-        if(patient.isEmpty())
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-
-        if (!credentialService.setPrivateDetails(encryptedDetails, patient.get())) {
+        if (!credentialService.setPrivateDetails(encryptedDetails, patient)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
     }
@@ -99,13 +94,9 @@ public class UmkController {
     @GetMapping("/patient/details")
     @ResponseBody
     public PatientPrivateDetails.PatientPrivateDetailsRecord getPatientDetails(Authentication auth) {
-        Optional<Patient> patient = this.credentialService.getPatientRepository()
-                .findByUsername(String.valueOf(auth.getPrincipal()));
+        Patient patient = AuthenticationToken.extractPatient(auth, credentialService.getPatientRepository());
 
-        if(patient.isEmpty())
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-
-        return patient.get().getDetails().toRecord();
+        return patient.getDetails().toRecord();
     }
 }
 

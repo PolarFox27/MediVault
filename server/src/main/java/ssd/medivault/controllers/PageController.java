@@ -1,6 +1,7 @@
 package ssd.medivault.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,14 +15,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Controller
+@RequiredArgsConstructor
 public class PageController {
 
     private final WebAuthnCredentialService registrationService;
-
-
-    public PageController(WebAuthnCredentialService registrationService) {
-        this.registrationService = registrationService;
-    }
 
     /**
      * Mapping returning the base page layout for all pages requested.
