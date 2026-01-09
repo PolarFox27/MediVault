@@ -6,6 +6,7 @@ function renderFile(file) {
     // Store ID
     div.dataset.fileId = file.id;
     div.dataset.fek = file.fek;
+    div.dataset.filename = file.filename;
 
     // Add inner HTML content
     div.innerHTML = `
@@ -61,7 +62,6 @@ function renderFile(file) {
 }
 
 async function decryptFile(file) {
-    console.log("File fetched:", file);
     const fek = await decrypt(hexToUint8Array(file.fek), hexToUint8Array(file.fekIv));
     const name = await decrypt(hexToUint8Array(file.name), hexToUint8Array(file.nameIv), fek);
 
@@ -99,6 +99,8 @@ function openFileInput(){
         const file = input.files[0];
         if (!file) return;
 
+        input.value = "";
+
         const plaintextFek = crypto.getRandomValues(new Uint8Array(32));
         const fek = await encrypt(plaintextFek);
 
@@ -106,6 +108,9 @@ function openFileInput(){
         const data = await encrypt(fileBytes, plaintextFek);
         const filename = await encrypt(stringToUint8Array(file.name), plaintextFek);
 
+
+        const existingFile = document.getElementById("files-box").querySelector(`[data-filename="${CSS.escape(file.name)}"]`);
+        const id = existingFile ? existingFile.dataset.fileId : 0;
 
         const form = new FormData();
         form.append("data", new Blob([data.encryptedData]));
@@ -115,20 +120,14 @@ function openFileInput(){
         form.append("fek", new Blob([fek.encryptedData]));
         form.append("fekIv", new Blob([fek.iv]));
 
-        const response = await fetch("/patient/files", {
+        const response = await fetch("/patient/files?id=" + id, {
             method: "POST",
             credentials: "same-origin",
             body: form
         });
 
-        const id = initialCheckStatus(response);
-        let box = document.getElementById("files-box");
-        box.appendChild(renderFile({
-            id: id,
-            fek: plaintextFek,
-            filename: file.name,
-            updatedAt: new Date().toLocaleString()
-        }));
+        initialCheckStatus(response);
+        await fetchAndRenderFiles();
     }
 
     input.click();

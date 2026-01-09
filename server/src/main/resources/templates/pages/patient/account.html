@@ -42,7 +42,7 @@
                             <span class="tooltip">Unique Key Identifier</span>
                         </button>
 
-                        <button th:if="${key.credentialId != currentCred}" class="delete-btn btn-with-icon tooltip-button"
+                        <button th:if="${key.credentialId != currentCred}" class="delete-btn key-delete-button btn-with-icon tooltip-button"
                                 th:data-credential-id="${key.credentialId}">
                             <img th:src="@{/icons/delete.png}" alt="Delete" class="icon delete-icon width-30">
                             <span class="tooltip">Delete</span>

@@ -24,7 +24,7 @@ function deleteKey(credentialId){
 
 // Bind the deleteKey function to the delete buttons in the key list
 document.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-btn");
+    const btn = e.target.closest(".key-delete-button");
     if (!btn) return;
 
     showConfirm("Are you sure you want to delete this key?", "Yes", "No", () => {

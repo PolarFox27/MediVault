@@ -46,6 +46,7 @@ public class PatientFilesController {
             @RequestPart("filenameIv") MultipartFile filenameIv,
             @RequestPart("fek") MultipartFile fek,
             @RequestPart("fekIv") MultipartFile fekIv,
+            @RequestParam Long id,
             Authentication authentication) {
 
         Optional<Patient> patient = patientRepository.findByUsername(String.valueOf(authentication.getPrincipal()));
@@ -53,7 +54,7 @@ public class PatientFilesController {
         if(patient.isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
-        EncryptedFile f = new EncryptedFile();
+        EncryptedFile f = fileRepository.findById(id).orElse(new EncryptedFile());
         try {
             f.setData(data.getBytes());
             f.setDataIv(dataIv.getBytes());

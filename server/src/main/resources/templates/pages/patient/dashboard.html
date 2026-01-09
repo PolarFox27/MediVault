@@ -1,5 +1,8 @@
 <div th:fragment="frag-patient-dashboard" class="main-content relative fill-width">
-    <button class="text-button text-button-1 margin-top-30 margin-bottom-30" onclick="openFileInput()">Upload New File</button>
+    <div class="centered-container">
+        <button class="text-button text-button-1 margin-top-30 margin-bottom-30 font-20" onclick="openFileInput()">Upload New File</button>
+    </div>
+
     <input id="uploadFileInput" type="file" hidden />
     <div class="centered-container vertical-flex fill-width" id="files-box"></div>
 </div>
