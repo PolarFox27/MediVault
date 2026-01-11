@@ -29,3 +29,31 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+jar {
+    manifest {
+        attributes(
+            'Main-Class': application.mainClass
+        )
+    }
+}
+
+tasks.register('fatJar', Jar) {
+    archiveClassifier.set('all')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes(
+            'Main-Class': 'ssd.medivault.logserver.LogServer'
+        )
+    }
+
+    from(sourceSets.main.output) // your compiled classes
+
+    // Include runtime dependencies (other JARs)
+    from {
+        configurations.runtimeClasspath.filter { it.name.endsWith('jar') }.collect { zipTree(it) }
+    }
+}
+
+
+
