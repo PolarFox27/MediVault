@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ssd.medivault.auth.AuthenticationToken;
+import ssd.medivault.auth.HCaptchaService;
 import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.auth.WebAuthnRegistrationService;
 import ssd.medivault.entities.Patient;
@@ -28,6 +29,7 @@ public class PatientAuthController {
 
     private final WebAuthnCredentialService credentialService;
     private final WebAuthnRegistrationService registrationService;
+    private final HCaptchaService hCaptchaService;
 
     /**
      * This function is the start endpoint of the WebAuthn registration protocol.
@@ -38,7 +40,13 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/register/start")
     @ResponseBody
-    public String startPatientRegistration(HttpSession session) {
+    public String startPatientRegistration(@RequestParam String captchaToken,
+                                           HttpServletRequest request,
+                                           HttpSession session) {
+
+        if (!hCaptchaService.verify(captchaToken, request.getRemoteAddr())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Captcha verification failed");
+        }
 
         // Generate a random 32-bytes user handle for the patient
         byte[] bytes = new byte[32];
@@ -102,16 +110,22 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/login/start")
     @ResponseBody
-    public String startPatientLogin(HttpSession session) {
+    public String startPatientLogin(@RequestParam String captchaToken,
+                                    HttpServletRequest request,
+                                    HttpSession session) {
+
+        if (!hCaptchaService.verify(captchaToken, request.getRemoteAddr())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Captcha verification failed");
+        }
 
         // Create the assertion to be sent to the client
-        AssertionRequest request = registrationService.getRelyingParty().startAssertion(StartAssertionOptions.builder()
+        AssertionRequest assertionRequest = registrationService.getRelyingParty().startAssertion(StartAssertionOptions.builder()
                 .userVerification(UserVerificationRequirement.PREFERRED)
                 .build());
         try {
             // Try sending it to the client as JSON
-            session.setAttribute("assertionRequest", request);
-            return request.toCredentialsGetJson();
+            session.setAttribute("assertionRequest", assertionRequest);
+            return assertionRequest.toCredentialsGetJson();
         } catch (JsonProcessingException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

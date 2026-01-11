@@ -21,7 +21,9 @@
                 <h2 class="margin-bottom-20">Passwordless Login</h2>
                 <form action="/webauthn/login/finish" method="POST" id="loginForm">
                     <input type="hidden" id="credential" name="credential">
-                    <button type="button" onclick="login()"
+                    <input type="hidden" id="loginCaptchaToken" name="captchaToken">
+                    <div id="hcaptcha-login" class="h-captcha" data-sitekey="e2cc3850-5ae4-487a-a932-570a206ccebe" data-size="invisible" data-callback="onLoginCaptcha"></div>
+                    <button type="button" onclick="triggerLoginWithCaptcha()"
                             class="text-button text-button-1 fill-width font-20">
                         Login with Security Key
                     </button>
@@ -38,7 +40,9 @@
                     <input type="date" id="dob" name="dob" required>
                     <label for="credname" class="font-20 margin-bottom-5">Security Key Name</label>
                     <input type="text" id="credname" minlength="3" maxlength="16" name="credname" placeholder="Blue YubiKey" required>
-                    <button type="button" class="text-button text-button-1 fill-width font-20" onclick="register()">
+                    <input type="hidden" id="registerCaptchaToken" name="captchaToken">
+                    <div id="hcaptcha-register" class="h-captcha" data-sitekey="e2cc3850-5ae4-487a-a932-570a206ccebe" data-size="invisible" data-callback="onRegisterCaptcha"></div>
+                    <button type="button" class="text-button text-button-1 fill-width font-20" onclick="triggerRegisterWithCaptcha()">
                         Register
                     </button>
                 </form>
