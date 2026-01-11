@@ -1,0 +1,52 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=changeme
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  logserver:
+    image: projectssd-logserver
+    build:
+      context: ./logs
+    volumes:
+      # Mount the audit.log folder to a fixed path inside container
+      - ./logs/data:/app/logs
+    environment:
+      - AUDIT_HMAC_KEY=supersecurekey
+      - AUDIT_LOG_FILE=/app/logs/audit.log
+      - AUDIT_PORT=5555
+    ports:
+      - "5555:5555"
+    command: >
+      sh -c "java -jar build/libs/medivault-logserver-0.0.1-SNAPSHOT.jar"
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.1
+    user: root
+    volumes:
+      # Filebeat expects a file path, mount host folder to a container path
+      - ./logs/data:/usr/share/filebeat/logs:ro
+      - ./logs/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    depends_on:
+      - elasticsearch
+      - logserver
+    command: ["filebeat", "-e", "-strict.perms=false"]
+
+volumes:
+  es_data:
+
