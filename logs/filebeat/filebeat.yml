@@ -1,15 +1,20 @@
 filebeat.inputs:
-- type: log
-  enabled: true
-  paths:
-    - /usr/share/filebeat/logs/audit.log
-  fields:
-    log_type: audit
-  fields_under_root: true
+  - type: log
+    enabled: true
+    paths:
+      - /usr/share/filebeat/logs/audit.log
+    fields:
+      log_type: audit
+      application: medivault
+    fields_under_root: true
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
   username: "elastic"
   password: "changeme"
-  index: "audit-%{+yyyy.MM.dd}"
+  index: "audit-logs-%{+yyyy.MM.dd}"
 
+# Disable Index Lifecycle Management (ILM)
+setup.ilm.enabled: false
+setup.template.enabled: false  # Disable template setup
+logging.level: info

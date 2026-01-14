@@ -1,18 +1,28 @@
-# Use a lightweight OpenJDK image
-FROM eclipse-temurin:21-jdk-jammy
+# Stage 1: Build
+FROM gradle:8.10.2-jdk21 AS build
 
-# Set working directory inside container
 WORKDIR /app
 
-# Copy the fat JAR into the container
-COPY build/libs/medivault-logserver-0.0.1-SNAPSHOT-all.jar ./logserver.jar
+# Copy Gradle files
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle gradle/
 
-# Expose port (matches your LogServer.java)
+# Copy source code
+COPY src src/
+
+# Build fat JAR (utilise la tâche fatJar définie dans build.gradle)
+RUN ./gradlew clean fatJar -x test
+
+# Stage 2: Runtime
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Copy the fat JAR (nom avec -all suffix)
+COPY --from=build /app/build/libs/*-all.jar ./logserver.jar
+
+# Expose port
 EXPOSE 5555
 
-# Environment variable for HMAC key
-ENV AUDIT_HMAC_KEY=change_this_secret_key
-
-# Run the log server
+# Run the application
 ENTRYPOINT ["java", "-jar", "logserver.jar"]
-

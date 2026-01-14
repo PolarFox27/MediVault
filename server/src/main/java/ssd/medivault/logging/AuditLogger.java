@@ -1,13 +1,18 @@
 package ssd.medivault.logging;
 
 import java.io.IOException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 public class AuditLogger {
     private static AuditLogger instance;
     private final LogClient client;
 
-    private AuditLogger(String host, int port) {
+    public AuditLogger(
+            @Value("${log.server.host:127.0.0.1}") String host,
+            @Value("${log.server.port:5555}") int port) {
         this.client = new LogClient(host, port);
+        instance = this;
     }
 
     /**
