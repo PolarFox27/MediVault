@@ -10,6 +10,10 @@ services:
       - HCAPTCHA_SECRET=${HCAPTCHA_SECRET}
       - LOG_SERVER_HOST=logserver
       - LOG_SERVER_PORT=5555
+      - SSL_KEYSTORE_LOCATION=${SSL_KEYSTORE_LOCATION}
+      - SSL_KEYSTORE_PASSWORD=${SSL_KEYSTORE_PASSWORD}
+      - SSL_TRUSTSTORE_LOCATION=${SSL_TRUSTSTORE_LOCATION}
+      - SSL_TRUSTSTORE_PASSWORD=${SSL_TRUSTSTORE_PASSWORD}
     depends_on:
       - logserver
     volumes:
@@ -22,7 +26,7 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     environment:
       - discovery.type=single-node
-      - ELASTIC_PASSWORD=changeme
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
@@ -49,10 +53,10 @@ services:
     image: docker.elastic.co/kibana/kibana:8.11.1
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=dat
-      - ELASTICSEARCH_PASSWORD=dat
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
       - XPACK_SECURITY_ENABLED=true
-      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=a7a6311933d3503b89bc2dbc36572c33a6c10925682e591bffcab6911c06786d
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
     ports:
       - "5601:5601"
     depends_on:
@@ -75,7 +79,7 @@ services:
     volumes:
       - ./logs/data:/app/logs
     environment:
-      - AUDIT_HMAC_KEY=supersecurekey
+      - AUDIT_HMAC_KEY=${AUDIT_HMAC_KEY}
       - AUDIT_LOG_FILE=/app/logs/audit.log
       - AUDIT_PORT=5555
     ports:
@@ -87,6 +91,10 @@ services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.11.1
     user: root
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
     volumes:
       - ./logs/data:/usr/share/filebeat/logs:ro
       - ./logs/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro

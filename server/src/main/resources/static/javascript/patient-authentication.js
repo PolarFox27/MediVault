@@ -39,9 +39,11 @@ function onRegisterCaptcha(token) {
 
 function triggerLoginWithCaptcha() {
     console.debug('triggerLoginWithCaptcha called');
+    document.getElementById("button-login").textContent = 'Loading Captcha...';
     if (window.hcaptcha && typeof window.hcaptcha.execute === 'function' && typeof window.loginWidgetId !== 'undefined') {
         document.addEventListener('hcaptcha-login-done', function once() {
             document.removeEventListener('hcaptcha-login-done', once);
+            document.getElementById("button-login").textContent = 'Login with Security Key';
             login();
         });
         try {
@@ -56,8 +58,10 @@ function triggerLoginWithCaptcha() {
 
 function triggerRegisterWithCaptcha() {
     console.debug('triggerRegisterWithCaptcha called');
+    document.getElementById("button-register").textContent = 'Loading Captcha...';
     if (window.hcaptcha && typeof window.hcaptcha.execute === 'function' && typeof window.registerWidgetId !== 'undefined') {
         document.addEventListener('hcaptcha-register-done', function once() {
+            document.getElementById("button-register").textContent = 'Register';
             document.removeEventListener('hcaptcha-register-done', once);
             register();
         });

@@ -30,8 +30,10 @@ public class AppendOnlyLogStore {
         try {
             List<String> lines = Files.readAllLines(logFile);
             if (lines.isEmpty()) return "GENESIS";
-            return lines.get(lines.size() - 1).split("\\|")[5];
-        } catch (IOException e) {
+            String last_line = lines.get(lines.size() - 1);
+            if(last_line.trim().isEmpty()) return "GENESIS";
+            return last_line.split("\\|")[8];
+        } catch (Exception e) {
             return "GENESIS";
         }
     }

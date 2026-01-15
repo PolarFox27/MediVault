@@ -5,6 +5,8 @@ build/
 !**/src/test/**/build/
 *.db
 *.p12
+*.env
+.log
 
 ### PKI Private Keys (NEVER commit!) ###
 *.key

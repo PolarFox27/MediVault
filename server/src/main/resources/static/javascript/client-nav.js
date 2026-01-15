@@ -1,6 +1,7 @@
 const DEFAULT_CALLBACKS = {
     "/patient/dashboard": () => fetchAndRenderFiles(),
-    "/patient/account": () => loadPersonalDetails()
+    "/patient/account": () => loadPersonalDetails(),
+    "/auth/patient": () => renderCaptchas(),
 }
 
 
@@ -24,8 +25,6 @@ function navigate(url, callback = () => {}, defaultCallback = true) {
             if(defaultCallback) {
                 DEFAULT_CALLBACKS[url]?.();
             }
-            // If the loaded fragment needs hCaptcha widgets, attempt to render them
-            try { if (typeof renderCaptchas === 'function') renderCaptchas(); } catch (e) {}
             callback();
         });
 

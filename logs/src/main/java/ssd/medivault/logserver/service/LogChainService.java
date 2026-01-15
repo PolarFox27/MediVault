@@ -24,9 +24,9 @@ public class LogChainService {
         
         String payload = raw + "|" + lastHash;
         String entryHash = hmac.hmac(payload);
-        String[] parts = raw.split("\\|", 5); // timestamp|actor|action|target|extraData
+        String[] parts = raw.split("\\|", 6); // timestamp|level|actor|action|target|extraData
         
-        if (parts.length < 5) {
+        if (parts.length < 6) {
             System.err.println("Rejected malformed log line: " + raw);
             return;
         }
@@ -45,7 +45,7 @@ public class LogChainService {
         }
         lastTimestamp = ts;
         
-        LogEntry entry = new LogEntry(ts, parts[1], parts[2], parts[3], parts[4], lastHash, entryHash);
+        LogEntry entry = new LogEntry(ts, parts[1], parts[2], parts[3], parts[4], parts[5], lastHash, entryHash);
         store.append(entry);
         lastHash = entryHash;
     }

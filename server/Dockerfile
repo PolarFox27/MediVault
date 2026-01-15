@@ -23,6 +23,7 @@ COPY --from=build /app/build/libs/*.jar app.jar
 
 # CORRECTION: Copier le certificat depuis le contexte (pas depuis build stage)
 COPY src/main/resources/medivault.p12 /app/medivault.p12
+COPY src/main/resources/pki/ /app/pki/
 
 # Expose HTTPS port
 EXPOSE 8443

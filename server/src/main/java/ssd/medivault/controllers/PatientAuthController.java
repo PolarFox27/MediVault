@@ -18,6 +18,7 @@ import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.auth.WebAuthnRegistrationService;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
+import ssd.medivault.logging.AuditLogger;
 import ssd.medivault.utils.EncodingUtils;
 
 import java.io.IOException;
@@ -30,6 +31,7 @@ public class PatientAuthController {
     private final WebAuthnCredentialService credentialService;
     private final WebAuthnRegistrationService registrationService;
     private final HCaptchaService hCaptchaService;
+    private final AuditLogger logger;
 
     /**
      * This function is the start endpoint of the WebAuthn registration protocol.
@@ -45,6 +47,7 @@ public class PatientAuthController {
                                            HttpSession session) {
 
         if (!hCaptchaService.verify(captchaToken, request.getRemoteAddr())) {
+            logger.logAction(AuditLogger.Level.WARN, "Non-authenticated User", "PATIENT_START_REGISTRATION", null, "Failed Captcha");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Captcha verification failed");
         }
 
@@ -60,6 +63,7 @@ public class PatientAuthController {
                 .id(id)
                 .build();
         Patient patient = new Patient(userIdentity);
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_REGISTRATION", null);
         return registrationService.createJsonCredentialRegistrationOptions(patient, session);
     }
 
@@ -97,7 +101,7 @@ public class PatientAuthController {
         AuthenticationToken.authenticatePatient(savedPatient.getUsername(),
                 EncodingUtils.toHex(patientAuth.getCredentialId()),
                 request);
-
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + savedPatient.getUsername(), "PATIENT_FINISH_REGISTRATION", null);
         return patientAuth.toKeyRecord();
     }
 
@@ -115,6 +119,7 @@ public class PatientAuthController {
                                     HttpSession session) {
 
         if (!hCaptchaService.verify(captchaToken, request.getRemoteAddr())) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null, "Failed Captcha");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Captcha verification failed");
         }
 
@@ -125,8 +130,10 @@ public class PatientAuthController {
         try {
             // Try sending it to the client as JSON
             session.setAttribute("assertionRequest", assertionRequest);
+            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null);
             return assertionRequest.toCredentialsGetJson();
         } catch (JsonProcessingException e) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null, "Bad Request");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
@@ -162,18 +169,22 @@ public class PatientAuthController {
                         result.getSignatureCount());
 
                 if(authenticator == null) {
+                    logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed");
                 }
 
                 AuthenticationToken.authenticatePatient(result.getUsername(),
                                                         EncodingUtils.toHex(authenticator.getCredentialId()),
                                                         request);
+                logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + result.getUsername(), "PATIENT_FINISH_LOGIN", null);
                 return authenticator.toKeyRecord();
             } else {
+                logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed");
             }
 
         } catch (IOException | AssertionFailedException e) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed", e);
         }
     }
@@ -184,15 +195,17 @@ public class PatientAuthController {
      * It retrieves the patient information from the authentication token,
      * then returns the WebAuthn credentials registration options to the client.
      *
+     * @param request the HTTP request object
      * @param session the HTTP session object, used to store some attributes for the registration.
+     * @param auth the authentication token
      * @return the credentials options to be sent to the client, in JSON format.
      */
     @PostMapping("/webauthn/newkey/start")
     @ResponseBody
-    public String startNewKeyRegistration(HttpSession session, Authentication auth) {
+    public String startNewKeyRegistration(HttpServletRequest request, HttpSession session, Authentication auth) {
 
-        Patient patient = AuthenticationToken.extractPatient(auth, registrationService.getPatientRepository());
-
+        Patient patient = credentialService.extractPatient(auth, "PATIENT_NEWKEY_START", request);
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + patient.getUsername(), "PATIENT_NEWKEY_START", null);
         return registrationService.createJsonCredentialRegistrationOptions(patient, session);
     }
 
@@ -204,13 +217,15 @@ public class PatientAuthController {
      * @param credential the patient credentials (in JSON)
      * @param credname the credential name provided by the user
      * @param session the HTTP session object
+     * @param request the HTTP request object
      * @return a redirect link to the key management page if the new key registration is successful
      */
     @PostMapping("/webauthn/newkey/finish")
     @ResponseBody
     public PatientAuthenticator.KeyRecord finishNewKeyRegistration(@RequestParam String credential,
-                                                 @RequestParam String credname,
-                                                 HttpSession session) {
+                                                                   @RequestParam String credname,
+                                                                   HttpSession session,
+                                                                   HttpServletRequest request) {
         // Complete the registration
         WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
                 credential);
@@ -222,6 +237,7 @@ public class PatientAuthController {
                 savedPatient,
                 credname);
         PatientAuthenticator savedAuth = credentialService.getAuthRepository().save(patientAuth);
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + savedPatient.getUsername(), "PATIENT_NEWKEY_FINISH", null);
         return savedAuth.toKeyRecord();
     }
 
@@ -231,20 +247,26 @@ public class PatientAuthController {
      *
      * @param credentialId the key to delete
      * @param auth the authentication token
+     * @param request the HTTP request object
      */
     @DeleteMapping("/webauthn/remove")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeAuthenticationKey(@RequestParam String credentialId, Authentication auth) {
+    public void removeAuthenticationKey(@RequestParam String credentialId, Authentication auth, HttpServletRequest request) {
 
         String currentCredentialId = String.valueOf(auth.getCredentials());
         if(credentialId.equals(currentCredentialId)){
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Patient:" + auth.getPrincipal(), "PATIENT_DELETE_KEY", null, "Bad Request");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot remove the current authentication key.");
         }
 
         if(!credentialService.areCredentialsFromSamePatient(credentialId, currentCredentialId)) {
+
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Patient:" + auth.getPrincipal(), "PATIENT_DELETE_KEY", null, "Unauthorized");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Cannot remove this key.");
         }
 
         credentialService.deleteCredentials(credentialId);
+
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + auth.getPrincipal(), "PATIENT_DELETE_KEY", null);
     }
 }

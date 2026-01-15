@@ -14,10 +14,8 @@ import java.io.File;
 
 /**
  * Programmatic SSL/TLS configuration for Tomcat with mTLS (mutual TLS) support.
- * 
  * This configuration enables client certificate authentication for doctors
  * while maintaining HTTPS for all connections.
- * 
  * Security: The truststore contains only the Intermediate CA certificate,
  * ensuring only certificates signed by our PKI are accepted.
  */
@@ -42,17 +40,18 @@ public class TomcatSslConfig {
     @Value("${ssl.client-auth:want}")
     private String clientAuth;
 
+    @Value("${server.port}")
+    private int portNumber;
+
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> sslTomcatCustomizer() {
-        return factory -> {
-            factory.addConnectorCustomizers(this::configureSSL);
-        };
+        return factory -> factory.addConnectorCustomizers(this::configureSSL);
     }
 
     private void configureSSL(Connector connector) {
         connector.setScheme("https");
         connector.setSecure(true);
-        connector.setPort(8443);
+        connector.setPort(portNumber);
 
         Http11NioProtocol protocol = (Http11NioProtocol) connector.getProtocolHandler();
         protocol.setSSLEnabled(true);

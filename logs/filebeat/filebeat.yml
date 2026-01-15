@@ -1,5 +1,6 @@
 filebeat.inputs:
-  - type: log
+  - type: filestream
+    id: audit-log
     enabled: true
     paths:
       - /usr/share/filebeat/logs/audit.log
@@ -8,10 +9,33 @@ filebeat.inputs:
       application: medivault
     fields_under_root: true
 
+processors:
+
+  # Split line into tokens
+  - dissect:
+      tokenizer: "%{timestamp}|%{severity_level}|%{remote_ip}|%{actor}|%{action}|%{target}|%{extra_data}|%{previous_hash}|%{hash}"
+      field: "message"
+      target_prefix: ""
+
+  # Convert epoch millis to @timestamp
+  - timestamp:
+      field: timestamp
+      layouts:
+        - UNIX_MS
+      ignore_failure: false
+
+  - drop_fields:
+      fields: [ "event_time", "message" ]
+
+  - add_host_metadata: {}
+  - add_docker_metadata: {}
+
+
 output.elasticsearch:
-  hosts: ["http://elasticsearch:9200"]
-  username: "elastic"
-  password: "changeme"
+  hosts:
+    - ${ELASTICSEARCH_HOSTS}
+  username: ${ELASTICSEARCH_USERNAME}
+  password: ${ELASTICSEARCH_PASSWORD}
   index: "audit-logs-%{+yyyy.MM.dd}"
 
 # Disable Index Lifecycle Management (ILM)

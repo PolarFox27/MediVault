@@ -3,14 +3,20 @@ package ssd.medivault.auth;
 import com.yubico.webauthn.*;
 import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.data.exception.HexException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Repository;
 import lombok.Getter;
+import org.springframework.web.server.ResponseStatusException;
 import ssd.medivault.data.PatientAuthenticatorRepository;
 import ssd.medivault.data.PatientRepository;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
 import ssd.medivault.entities.PatientPrivateDetails;
+import ssd.medivault.logging.AuditLogger;
 import ssd.medivault.utils.EncodingUtils;
 
 import java.util.Arrays;
@@ -21,22 +27,12 @@ import java.util.stream.Collectors;
 
 @Getter
 @Repository
+@RequiredArgsConstructor
 public class WebAuthnCredentialService implements CredentialRepository {
 
     private final PatientRepository patientRepository;
     private final PatientAuthenticatorRepository authRepository;
-
-    /**
-     * Constructor for the WebauthnService class
-     *
-     * @param patientRepository the JPA repository storing patient information
-     * @param authRepository the JPA repository storing patient authentication keys
-     */
-    public WebAuthnCredentialService(PatientRepository patientRepository,
-                                     PatientAuthenticatorRepository authRepository) {
-        this.patientRepository = patientRepository;
-        this.authRepository = authRepository;
-    }
+    private final AuditLogger logger;
 
     /**
      * This function looks up in the database to find the matching user handle for the provided username.
@@ -229,5 +225,25 @@ public class WebAuthnCredentialService implements CredentialRepository {
             return false;
         }
 
+    }
+
+
+    /**
+     * Helper function that extracts the patient identity from an authentication token.
+     * If the token is invalid or the patient doesn't exist. HTTP 401 Unauthorized is thrown
+     *
+     * @param token the authentication token
+     * @param action the action for which the patient is extracted (for logging purposes)
+     * @param request the HTTP request object (for logging purposes)
+     * @return the patient object
+     */
+    public Patient extractPatient(Authentication token, String action, HttpServletRequest request) {
+        Optional<Patient> patient = this.patientRepository.findByUsername(String.valueOf(token.getPrincipal()));
+
+        if(patient.isEmpty()) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", action, null, "Unauthorized");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        return patient.get();
     }
 }

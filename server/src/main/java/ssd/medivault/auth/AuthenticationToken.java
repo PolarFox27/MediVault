@@ -1,19 +1,13 @@
 package ssd.medivault.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.web.server.ResponseStatusException;
-import ssd.medivault.data.PatientRepository;
-import ssd.medivault.entities.Patient;
 
 import java.util.List;
-import java.util.Optional;
 
 public class AuthenticationToken
         extends AbstractAuthenticationToken {
@@ -76,23 +70,6 @@ public class AuthenticationToken
                 HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 context
         );
-    }
-
-    /**
-     * Helper function that extracts the patient identity from an authentication token.
-     * If the token is invalid or the patient doesn't exist. HTTP 401 Unauthorized is thrown
-     *
-     * @param token the authentication token
-     * @param repository the patient repository
-     * @return the patient object
-     */
-    public static Patient extractPatient(Authentication token, PatientRepository repository){
-        Optional<Patient> patient = repository.findByUsername(String.valueOf(token.getPrincipal()));
-
-        if(patient.isEmpty())
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-
-        return patient.get();
     }
 
 
