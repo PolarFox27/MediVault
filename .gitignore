@@ -6,6 +6,10 @@ build/
 *.db
 *.p12
 
+### PKI Private Keys (NEVER commit!) ###
+*.key
+pki/doctors/*/doctor.p12
+
 ### STS ###
 .apt_generated
 .classpath

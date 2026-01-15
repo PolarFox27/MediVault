@@ -2,30 +2,74 @@ package ssd.medivault.auth;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
 
     /**
-     * This function configures Spring Security for the application.
-     * It specifies the endpoints requiring authenticated access.
-     * It defines the logout URL and behavior.
-     *
-     * @param http the HTTP security builder
-     * @return the constructed HTTP security configuration
+     * Security filter chain for DOCTOR endpoints (X.509 certificate authentication).
+     * This has higher priority (@Order(1)) and handles /doctor/** paths.
+     * 
+     * Doctors authenticate via mTLS - their certificate is verified during TLS handshake,
+     * and their identity is extracted from the certificate Subject (CN, O fields).
      */
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) {
-
+    @Order(1)
+    SecurityFilterChain doctorFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)  // WebAuthn handles challenge security, no need for CSRF
+                .securityMatcher("/doctor/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().authenticated()
+                )
+                .x509(x509 -> x509
+                        .subjectPrincipalRegex("CN=(.*?)(?:,|$)")
+                        .userDetailsService(doctorUserDetailsService())
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.sendError(403, "Doctor certificate required");
+                        })
+                );
+        
+        return http.build();
+    }
+
+    /**
+     * UserDetailsService for X.509 authenticated doctors.
+     * The username is extracted from the certificate CN field.
+     */
+    @Bean
+    UserDetailsService doctorUserDetailsService() {
+        return username -> new User(
+                username,
+                "",  // No password - authentication is via certificate
+                List.of(new SimpleGrantedAuthority("ROLE_DOCTOR"))
+        );
+    }
+
+    /**
+     * Security filter chain for PATIENT endpoints (WebAuthn authentication).
+     * This has lower priority (@Order(2)) and handles all other paths.
+     */
+    @Bean
+    @Order(2)
+    SecurityFilterChain patientFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
@@ -36,22 +80,21 @@ public class SecurityConfiguration {
                                 "/css/**",
                                 "/javascript/**",
                                 "/icons/**"
-                        ).permitAll()                   // Authorize unauthenticated access to some endpoints and resources
-                        .anyRequest().authenticated()   // Require authenticated access for any other request
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(getAuthenticationEntryPoint())
-                        .accessDeniedHandler(getAccessDeniedHandler())    // Forbidden or unauthenticated access redirect to the home page
+                        .accessDeniedHandler(getAccessDeniedHandler())
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(logout -> logout
-                        .logoutUrl("/logout")         // Specifies the logout URL
-                        .logoutSuccessUrl("/")        // Specifies where to be redirected after logging out.
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/")
                 );
 
         return http.build();
     }
-
 
     @Bean
     AuthenticationEntryPoint getAuthenticationEntryPoint() {
@@ -65,4 +108,3 @@ public class SecurityConfiguration {
                 response.sendRedirect("/");
     }
 }
-

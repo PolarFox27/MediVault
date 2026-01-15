@@ -130,8 +130,9 @@ async function login() {
 
     const newFormData = new FormData();
     newFormData.append("credential", JSON.stringify(encodedResult));
-    newFormData.append("captchaToken", document.getElementById("loginCaptchaToken").value);
-
+    const loginCaptchaToken = document.getElementById("loginCaptchaToken").value;
+    newFormData.append("captchaToken", loginCaptchaToken);
+    console.debug('login: sending /finish with captchaToken =', loginCaptchaToken ? 'present' : 'EMPTY');
     const newResponse = await fetch("/webauthn/login/finish", {
         method: 'POST',
         body: newFormData
