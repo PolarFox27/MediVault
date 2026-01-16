@@ -76,52 +76,38 @@ public class DoctorController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        try {
-            Doctor doctor = doctorAuthService.authenticateDoctor(cert);
+        Doctor doctor = doctorAuthService.authenticateDoctor(cert);
 
-            if(doctor.getPublicKey().length == 0) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-            }
-
-            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_DOCTOR_KEY", null);
-            return doctor.getKeyData();
-        } catch (Exception e) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_KEY", null, "Unauthorized");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if(doctor.getPublicKey().length == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_DOCTOR_KEY", null);
+        return doctor.getKeyData();
     }
 
     @PostMapping("/api/key")
     @ResponseBody
-    public void getDoctorKey(HttpServletRequest request, @RequestBody Doctor.DoctorKeyData keyData) {
+    public void setDoctorKey(HttpServletRequest request, @RequestBody Doctor.DoctorKeyData keyData) {
         X509Certificate cert = extractCertificate(request);
         if (cert == null) {
             logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "SET_DOCTOR_KEY", null, "No certificate found in request");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
+        Doctor doctor = doctorAuthService.authenticateDoctor(cert);
+
         try {
-            Doctor doctor = doctorAuthService.authenticateDoctor(cert);
-
-            if(doctor.getPublicKey().length == 0) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-            }
-
-            try {
-                doctor.fromKeyData(keyData);
-            }
-            catch (HexException e) {
-                logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "SET_DOCTOR_KEY", null, "Bad Request");
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-            }
-
-
-            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "SET_DOCTOR_KEY", null);
-
-        } catch (Exception e) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "SET_DOCTOR_KEY", null, "Unauthorized");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            doctor.fromKeyData(keyData);
+            doctorAuthService.getDoctorRepository().save(doctor);
         }
+        catch (HexException e) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "SET_DOCTOR_KEY", null, "Bad Request");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
+
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "SET_DOCTOR_KEY", null);
     }
 
     @GetMapping("/api/patients")
@@ -133,7 +119,7 @@ public class DoctorController {
             return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
         }
 
-        List<Patient> patients = patientRepository.findAllByOrganization(doctor.getOrganization());
+        List<Patient> patients = patientRepository.findAllByAppointedDoctorsContaining(doctor);
         List<Map<String, Object>> patientList = patients.stream()
             .map(p -> {
                 Map<String, Object> m = new HashMap<>();

@@ -50,12 +50,15 @@ public class Doctor {
     @Column(nullable = false)
     private byte[] publicKey;
 
+    @Lob
     @Column(nullable = false)
     private byte[] encryptedPrivateKey;
 
+    @Lob
     @Column(nullable = false)
     private byte[] encryptedPrivateKeyIv;
 
+    @Lob
     @Column(nullable = false)
     private byte[] encryptedPrivateKeySalt;
 

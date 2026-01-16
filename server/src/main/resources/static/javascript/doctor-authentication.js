@@ -1,3 +1,5 @@
+let DOCTOR_PRIVATE_KEY = new Uint8Array(0);
+
 function renderDoctorCaptcha() {
     if (window.hcaptcha && document.getElementById('hcaptcha-doctor-login')) {
         try {
@@ -30,35 +32,74 @@ function triggerDoctorLoginWithCaptcha() {
             document.getElementById("button-doctor-login").textContent = 'Login';
             document.removeEventListener('hcaptcha-doctor-done', once);
 
-            tryLogin();
+            tryLogin(password);
         });
         try {
             hcaptcha.execute(window.doctorCaptchaWidgetId);
         } catch (err) {
             console.warn('hcaptcha.execute failed, falling back to direct register()', err);
 
-            tryLogin();
+            tryLogin(password);
         }
     } else {
         console.debug('No hCaptcha available, calling register() directly');
-        tryLogin();
+        tryLogin(password);
     }
 }
 
 
-async function tryLogin() {
+async function tryLogin(password) {
     const response = await fetch('/doctor/api/key');
     if (response.status === 404) {
-        console.log("No Key Set");
-        generateAndSendKeys();
+        await generateAndSendKeys(password);
+        navigate("/doctor/dashboard");
     }
-    else {
-        console.log("Key Found");
+    else if (response.ok) {
+        try {
+            const result = await response.json();
+            const privateKey = hexToUint8Array(result.privateKey);
+            const privateKeySalt = hexToUint8Array(result.privateKeySalt);
+            const privateKeyIv = hexToUint8Array(result.privateKeyIv);
+
+            UMK = await deriveKeyFromPasswordAndSalt(password, privateKeySalt);
+            DOCTOR_PRIVATE_KEY = await decrypt(privateKey, privateKeyIv);
+            console.log("Key: ", DOCTOR_PRIVATE_KEY);
+            navigate("/doctor/dashboard");
+        }
+        catch (e) {
+            console.error(e);
+            showConfirm("Invalid Password. Please try again.", "Ok", "", () => {});
+        }
     }
-    navigate("/doctor/dashboard");
 }
 
-async function generateAndSendKeys() {
+async function deriveKeyFromPasswordAndSalt(password, salt) {
+    const baseKey = await crypto.subtle.importKey(
+        "raw",
+        stringToUint8Array(password),
+        "PBKDF2",
+        false,
+        ["deriveKey"]
+    );
+
+    const umk = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt,
+            iterations: 150_000,
+            hash: "SHA-256"
+        },
+        baseKey,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+    );
+
+    const umkBuf = await crypto.subtle.exportKey("raw", umk);
+    return new Uint8Array(umkBuf);
+}
+
+async function generateAndSendKeys(password) {
     const keyPair = await crypto.subtle.generateKey(
         {
             name: "RSA-OAEP",
@@ -71,8 +112,32 @@ async function generateAndSendKeys() {
     );
 
     const publicKeyBuf = await crypto.subtle.exportKey("spki", keyPair.publicKey);
-    const publicKey = new Uint8Array(publicKeyBuf);
     const privateKeyBuf = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
-    const privateKey = new Uint8Array(privateKeyBuf);
 
+    const publicKey = uint8ArrayToHex(new Uint8Array(publicKeyBuf));
+    DOCTOR_PRIVATE_KEY = new Uint8Array(privateKeyBuf);
+    console.log("Key: ", DOCTOR_PRIVATE_KEY);
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const privateKeySalt = uint8ArrayToHex(salt);
+
+
+    UMK = await deriveKeyFromPasswordAndSalt(password, salt);
+
+    const ciphertext = await encrypt(DOCTOR_PRIVATE_KEY);
+
+    const privateKey = uint8ArrayToHex(ciphertext.encryptedData);
+    const privateKeyIv = uint8ArrayToHex(ciphertext.iv);
+
+    await fetch("/doctor/api/key", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            publicKey,
+            privateKey,
+            privateKeyIv,
+            privateKeySalt
+        })
+    });
 }

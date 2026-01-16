@@ -53,13 +53,17 @@ async function savePersonalDetails() {
         return;
     }
 
-    const encryptedDob = await encrypt(stringToUint8Array(dobInput.value));
-    const encryptedName = await encrypt(stringToUint8Array(nameInput.value));
+    const fek = crypto.getRandomValues(new Uint8Array(32));
+    const encryptedDob = await encrypt(stringToUint8Array(dobInput.value), fek);
+    const encryptedName = await encrypt(stringToUint8Array(nameInput.value), fek);
+    const encryptedFek = await encrypt(fek);
     const request = {
         dob: uint8ArrayToHex(encryptedDob.encryptedData),
         dobIv: uint8ArrayToHex(encryptedDob.iv),
         name: uint8ArrayToHex(encryptedName.encryptedData),
-        nameIv: uint8ArrayToHex(encryptedName.iv)
+        nameIv: uint8ArrayToHex(encryptedName.iv),
+        fek: uint8ArrayToHex(encryptedFek.encryptedData),
+        fekIv: uint8ArrayToHex(encryptedFek.iv)
     }
 
     const response = await fetch("/patient/details", {
@@ -74,6 +78,7 @@ async function savePersonalDetails() {
     checkStatus(response);
     DOB = dobInput.value;
     FULL_NAME = nameInput.value;
+    loadWelcomeMessage();
 }
 
 async function fetchPersonalDetails() {
@@ -87,8 +92,9 @@ async function fetchPersonalDetails() {
 
     const result = await initialCheckStatus(response);
 
-    DOB = uint8ArrayToString(await decrypt(hexToUint8Array(result.dob), hexToUint8Array(result.dobIv)));
-    FULL_NAME = uint8ArrayToString(await decrypt(hexToUint8Array(result.name), hexToUint8Array(result.nameIv)));
+    const fek = await decrypt(hexToUint8Array(result.fek), hexToUint8Array(result.fekIv));
+    DOB = uint8ArrayToString(await decrypt(hexToUint8Array(result.dob), hexToUint8Array(result.dobIv), fek));
+    FULL_NAME = uint8ArrayToString(await decrypt(hexToUint8Array(result.name), hexToUint8Array(result.nameIv), fek));
 }
 
 function loadPersonalDetails() {
@@ -98,5 +104,6 @@ function loadPersonalDetails() {
 }
 
 function loadWelcomeMessage(){
+    if(!document.getElementById("welcome-message")) return;
     document.getElementById("welcome-message").textContent = "Welcome " + FULL_NAME;
 }

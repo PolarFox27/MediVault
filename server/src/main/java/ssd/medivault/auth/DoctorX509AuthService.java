@@ -1,5 +1,6 @@
 package ssd.medivault.auth;
 
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.Optional;
  * cryptographic proof of private key possession during TLS handshake.
  */
 @Service
+@Getter
 public class DoctorX509AuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(DoctorX509AuthService.class);
