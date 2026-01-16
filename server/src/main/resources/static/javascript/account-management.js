@@ -98,12 +98,16 @@ async function fetchPersonalDetails() {
 }
 
 function loadPersonalDetails() {
-    document.getElementById("name").value = FULL_NAME;
-    document.getElementById("dob").value = DOB;
+    document.getElementById("name").value = FULL_NAME || '';
+    document.getElementById("dob").value = DOB || '';
     loadWelcomeMessage();
 }
 
 function loadWelcomeMessage(){
-    if(!document.getElementById("welcome-message")) return;
-    document.getElementById("welcome-message").textContent = "Welcome " + FULL_NAME;
+    const welcomeEl = document.getElementById("welcome-message");
+    if (welcomeEl && FULL_NAME) {
+        welcomeEl.textContent = "Welcome " + FULL_NAME;
+    } else if (welcomeEl) {
+        welcomeEl.textContent = "Welcome";
+    }
 }

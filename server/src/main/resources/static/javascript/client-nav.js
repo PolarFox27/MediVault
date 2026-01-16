@@ -1,5 +1,5 @@
 const DEFAULT_CALLBACKS = {
-    "/patient/dashboard": () => fetchAndRenderFiles(),
+    "/patient/dashboard": () => { fetchAndRenderFiles(); fetchDoctors(); },
     "/patient/account": () => loadPersonalDetails(),
     "/auth/patient": () => renderCaptchas(),
     "/auth/doctor": () => renderDoctorCaptcha(),
