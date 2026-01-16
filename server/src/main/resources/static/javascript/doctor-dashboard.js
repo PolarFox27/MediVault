@@ -24,13 +24,13 @@ async function loadDoctorInfo() {
         const response = await fetch('/doctor/api/me');
         if (response.ok) {
             const doctor = await response.json();
-            document.getElementById('doctorName').textContent = doctor.commonName;
+            document.getElementById('doctorName').textContent = doctor.fullName;
             document.getElementById('doctorOrg').textContent = 'Organization: ' + doctor.organization;
-            document.getElementById('certSerial').textContent = doctor.serialNumber;
+            document.getElementById('certSerial').textContent = doctor.certificateSerial;
             // Update topbar with doctor name
             const topbarName = document.getElementById('topbar-doctor-name');
             if (topbarName) {
-                topbarName.textContent = doctor.commonName;
+                topbarName.textContent = doctor.fullName;
             }
         }
     } catch (e) {

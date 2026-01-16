@@ -119,6 +119,22 @@ public class PageController {
     }
 
     /**
+     * GET Endpoint for the patient doctor appointment page.
+     * This endpoint is protected and only accessible to authenticated patients.
+     *
+     * @param request the HTTP Request object
+     * @param auth the Authentication object to retrieve the patient keys.
+     * @return the patient account management model.
+     */
+    @GetMapping("/patient/appointed-doctors")
+    public String keyManagementPage(HttpServletRequest request, Authentication auth) {
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/patient/appointed-doctors :: frag-appointed-doctors";
+        }
+        return "layout";
+    }
+
+    /**
      * Helper function that defines the basic patient attributes in the model to be returned to the client.
      * These attributes include the username, the active credentials, the name and DOB.
      * These are retrieved from the authentication token and the database.

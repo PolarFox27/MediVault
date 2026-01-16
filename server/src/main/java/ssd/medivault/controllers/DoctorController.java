@@ -1,8 +1,7 @@
 package ssd.medivault.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,6 +19,7 @@ import ssd.medivault.entities.Doctor;
 import ssd.medivault.entities.EncryptedFile;
 import ssd.medivault.entities.FileChangeRequest;
 import ssd.medivault.entities.Patient;
+import ssd.medivault.logging.AuditLogger;
 import ssd.medivault.utils.EncodingUtils;
 import com.yubico.webauthn.data.exception.HexException;
 
@@ -31,31 +31,20 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/doctor")
+@RequiredArgsConstructor
 public class DoctorController {
 
-    private static final Logger logger = LoggerFactory.getLogger(DoctorController.class);
-    
+    private final AuditLogger logger;
     private final DoctorX509AuthService doctorAuthService;
     private final PatientRepository patientRepository;
     private final EncryptedFileRepository fileRepository;
     private final FileChangeRequestRepository changeRequestRepository;
 
-    public DoctorController(
-            DoctorX509AuthService doctorAuthService,
-            PatientRepository patientRepository,
-            EncryptedFileRepository fileRepository,
-            FileChangeRequestRepository changeRequestRepository) {
-        this.doctorAuthService = doctorAuthService;
-        this.patientRepository = patientRepository;
-        this.fileRepository = fileRepository;
-        this.changeRequestRepository = changeRequestRepository;
-    }
-
     @GetMapping("/dashboard")
     public String dashboard(HttpServletRequest request, Model model) {
         X509Certificate cert = extractCertificate(request);
         if (cert == null) {
-            logger.warn("No certificate found in request");
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_DASHBOARD", null, "No certificate found in request");
             return "redirect:/";
         }
 
@@ -72,7 +61,7 @@ public class DoctorController {
             
             return "pages/doctor/dashboard";
         } catch (Exception e) {
-            logger.error("Doctor authentication failed", e);
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_DASHBOARD", null, "Unauthorized");
             return "redirect:/";
         }
     }
@@ -82,6 +71,7 @@ public class DoctorController {
     public ResponseEntity<Map<String, Object>> getDoctorInfo(HttpServletRequest request) {
         X509Certificate cert = extractCertificate(request);
         if (cert == null) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_DETAILS", null, "No certificate found in request");
             return ResponseEntity.status(403).body(Map.of("error", "No certificate"));
         }
 
@@ -94,9 +84,10 @@ public class DoctorController {
             response.put("certificateSerial", doctor.getCertificateSerialNumber());
             response.put("firstLogin", doctor.getFirstLogin().toString());
             response.put("lastLogin", doctor.getLastLogin().toString());
+            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_DOCTOR_DETAILS", null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Doctor API call failed", e);
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_DETAILS", null, "Unauthorized");
             return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         }
     }
@@ -106,6 +97,7 @@ public class DoctorController {
     public ResponseEntity<?> getPatients(HttpServletRequest request) {
         Doctor doctor = authenticateRequest(request);
         if (doctor == null) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_APPOINTED_PATIENTS", null, "Unauthorized");
             return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
         }
 
@@ -118,7 +110,8 @@ public class DoctorController {
                 return m;
             })
             .collect(Collectors.toList());
-        
+
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_APPOINTED_PATIENTS", null);
         return ResponseEntity.ok(patientList);
     }
 
@@ -127,13 +120,18 @@ public class DoctorController {
     public ResponseEntity<?> getPatientFiles(@PathVariable Long patientId, HttpServletRequest request) {
         Doctor doctor = authenticateRequest(request);
         if (doctor == null) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_PATIENT_FILES_AS_DOCTOR", null, "Unauthorized");
             return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
         }
 
         Patient patient = patientRepository.findById(patientId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
+            .orElseThrow(() -> {
+                logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_PATIENT_FILES_AS_DOCTOR", null, "Not Found");
+                return new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found");
+            });
 
         if (!doctor.getOrganization().equals(patient.getOrganization())) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_PATIENT_FILES_AS_DOCTOR", null, "Unauthorized");
             return ResponseEntity.status(403).body(Map.of("error", "Patient not in your organization"));
         }
 
@@ -151,20 +149,29 @@ public class DoctorController {
         
         Doctor doctor = authenticateRequest(request);
         if (doctor == null) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null, "Unauthorized");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
         }
 
         Patient patient = patientRepository.findById(patientId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
+            .orElseThrow(() -> {
+                logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null, "Not Found");
+                return new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found");
+            });
 
         if (!doctor.getOrganization().equals(patient.getOrganization())) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null, "Unauthorized");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Patient not in your organization");
         }
 
         EncryptedFile file = fileRepository.findById(fileId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
+            .orElseThrow(() -> {
+                logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null, "Not Found");
+                return new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
+            });
 
         if (!file.getPatient().getId().equals(patient.getId())) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null, "Unauthorized");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "File does not belong to this patient");
         }
 
@@ -172,6 +179,8 @@ public class DoctorController {
             outputStream.write(file.getData());
             outputStream.flush();
         };
+
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null);
 
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"encrypted.bin\"")
@@ -206,7 +215,6 @@ public class DoctorController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "File does not belong to this patient");
         }
 
-        logger.info("Doctor {} deleted file {} for patient {}", doctor.getFullName(), fileId, patient.getUsername());
         fileRepository.delete(file);
     }
 
@@ -252,8 +260,6 @@ public class DoctorController {
         }
 
         FileChangeRequest saved = changeRequestRepository.save(changeRequest);
-        logger.info("Doctor {} created change request {} for patient {} file {}", 
-            doctor.getFullName(), saved.getId(), patient.getUsername(), fileId);
 
         return ResponseEntity.ok(Map.of(
             "id", saved.getId(),
@@ -296,7 +302,6 @@ public class DoctorController {
         try {
             return doctorAuthService.authenticateDoctor(cert);
         } catch (Exception e) {
-            logger.error("Doctor authentication failed", e);
             return null;
         }
     }

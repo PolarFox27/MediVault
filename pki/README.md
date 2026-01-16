@@ -59,36 +59,90 @@ pki/
 
 ## Usage
 
-### Initial Setup (run once)
+### Step 1. Initial Setup (run once)
+
+**Old PKI File Cleanup (if needed)**: only the `openssl.cnf` configs are preserved.
+```bash
+cd pki
+rm -f root-ca/*.pem root-ca/*.crt root-ca/*.key root-ca/serial* root-ca/index.txt* root-ca/crlnumber*
+rm -f intermediate-ca/*.pem intermediate-ca/*.crt intermediate-ca/*.csr intermediate-ca/*.key intermediate-ca/serial* intermediate-ca/index.txt* intermediate-ca/crlnumber* intermediate-ca/ca-chain.crt
+rm -rf doctors/*
+```
+**Setup of a new PKI**
 ```bash
 cd pki/scripts
 ./init-pki.sh
 ```
 
-### Issue a Doctor Certificate
+### Step 2. Issue a Doctor Certificate
 ```bash
 cd pki/scripts
 ./issue-doctor-cert.sh "Dr. John Smith" "Brussels Hospital"
 ```
 
-### Renew a Doctor Certificate (daily)
+During certificate creation, the password for the `.p12` file is shown on screen. Store it somewhere safe.
+
+
+### Step 3. Renew a Doctor Certificate (daily)
 ```bash
 ./issue-doctor-cert.sh "Dr. John Smith" "Brussels Hospital"
 ```
 
-### Import Certificate to Browser
+### Step 4. Import Certificate to Browser
 1. Import `doctors/<name>/doctor.p12` into browser
-2. Password is displayed when certificate is created
+2. Use the password displayed when the certificate is created
+
 
 ## Server Configuration
+
+### Step 1. Configure the Server to trust the PKI
+
+Once the PKI is set up as detailed above, configure the server to trust the intermediate CA:
+```bash
+cd server/src/main/resources/pki
+
+rm -f truststore.p12 # remove previous truststore if needed
+keytool -importcert -alias intermediate-ca \
+  -file ../../../../../pki/intermediate-ca/intermediate.crt \
+  -keystore truststore.p12 -storetype PKCS12 \
+  -storepass <TRUSTSTORE_PASSWORD> -noprompt
+```
+
+Remember the value of `TRUSTSTORE_PASSWORD`, as the environment variable `SSL_TRUSTSTORE_PASSWORD` will need to store it for the server.
 
 The server trusts only the Intermediate CA certificate. It:
 1. Requires client certificate for `/doctor/**` endpoints
 2. Validates certificate chain (Doctor → Intermediate → Root)
 3. Extracts doctor identity from certificate Subject (CN, O)
 
+### Step 2. Configure the Server SSL Certificate
+
+This certificate allows the clients to connect to the server using TLS/HTTPS. 
+In a production setting, a real certificate should be used, for example a free certificate provided by Let's Encrypt.
+Since we are not in a production setting, we will use a self-signed certificate.
+
+Do the following to create the self-signed certificate:
+```bash
+cd server/src/main/resources
+
+rm -f medivault.p12 # remove previous keystore if needed
+keytool -genkeypair \
+  -alias selfsigned \
+  -keyalg RSA \
+  -keysize 4096 \
+  -storetype PKCS12 \
+  -keystore certificate.p12 \
+  -validity 365 \
+  -dname "CN=localhost, OU=Dev, O=Medivault, L=Brussels, S=Brussels, C=BE" \
+  -storepass <KEYSTORE_PASSWORD>
+```
+
+Remember the value of `KEYSTORE_PASSWORD`, as the environment variable `SSL_KEYSTORE_PASSWORD` will need to store it for the server.
+
 ## Security Notes
 
 ⚠️ **PROTECT THE ROOT CA KEY** - Store offline, ideally on air-gapped machine
+
 ⚠️ **Intermediate key** should be protected but can be on server for automation
+
 ⚠️ **Doctor private keys** should never leave the doctor's device in production
