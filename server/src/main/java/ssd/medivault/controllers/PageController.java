@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import ssd.medivault.auth.WebAuthnCredentialService;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
-import ssd.medivault.utils.EncodingUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,20 +44,60 @@ public class PageController {
     }
 
     /**
+     * GET endpoint for the doctor login page
+     *
+     * @param request the HTTP request object
+     * @return the doctor authentication page
+     */
+    @GetMapping("/auth/doctor")
+    public String doctorAuthentication(HttpServletRequest request) {
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/auth/doctor-authentication :: frag-doctor-authentication";
+        }
+        return "layout";
+    }
+
+    /**
+     * GET Endpoint for the doctor dashboard page.
+     * This endpoint is protected and only accessible to authenticated patients.
+     *
+     * @param request the HTTP Request object
+     * @return the doctor dashboard model
+     */
+    @GetMapping("/doctor/dashboard")
+    public String doctorDashboardPage(HttpServletRequest request) {
+
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/doctor/dashboard :: frag-doctor-dashboard";
+        }
+        return "layout";
+    }
+
+    /**
      * GET Endpoint for the patient dashboard page.
      * This endpoint is protected and only accessible to authenticated patients.
      *
      * @param request the HTTP Request object
-     * @param model the UI model
-     * @param auth the Authentication object to retrieve the patient username
      * @return the patient dashboard model
      */
     @GetMapping("/patient/dashboard")
-    public String patientDashboardPage(HttpServletRequest request, Model model, Authentication auth) {
-        setBasicModelAttributes(model, registrationService, auth);
-
+    public String patientDashboardPage(HttpServletRequest request) {
         if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
             return "pages/patient/dashboard :: frag-patient-dashboard";
+        }
+        return "layout";
+    }
+
+    /**
+     * GET Endpoint for the doctor header fragment.
+     *
+     * @param request the HTTP Request object
+     * @return the doctor header fragment.
+     */
+    @GetMapping("/doctor/header")
+    public String doctorHeader(HttpServletRequest request) {
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "fragments/topbar-doctor :: frag-topbar-doctor";
         }
         return "layout";
     }

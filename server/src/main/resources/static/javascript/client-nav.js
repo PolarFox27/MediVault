@@ -2,6 +2,8 @@ const DEFAULT_CALLBACKS = {
     "/patient/dashboard": () => fetchAndRenderFiles(),
     "/patient/account": () => loadPersonalDetails(),
     "/auth/patient": () => renderCaptchas(),
+    "/auth/doctor": () => renderDoctorCaptcha(),
+    "doctor/dashboard": () => loadDoctorDashboard()
 }
 
 
@@ -40,6 +42,20 @@ function navigate(url, callback = () => {}, defaultCallback = true) {
                 app_header.innerHTML = text;
                 app_header.style.display = "block";
                 loadWelcomeMessage();
+            })
+    }
+    else if(url.includes("/doctor/")) {
+        fetch("/doctor/header", {
+            credentials: "same-origin",
+            headers: {
+                "X-Requested-With": "SPA",
+            }
+        })
+            .then((response) => response.text())
+            .then((text) => {
+                app_header.innerHTML = text;
+                app_header.style.display = "block";
+                loadDoctorInfo();
             })
     }
     else {

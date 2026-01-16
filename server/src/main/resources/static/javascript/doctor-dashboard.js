@@ -4,11 +4,11 @@ let selectedPatientId = null;
 let selectedFileId = null;
 let selectedFileName = null;
 
-document.addEventListener('DOMContentLoaded', function() {
+function loadDoctorDashboard() {
     loadDoctorInfo();
     loadPatients();
     loadChangeRequests();
-});
+}
 
 function showMessage(msg, isError) {
     const area = document.getElementById('messageArea');

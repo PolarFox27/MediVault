@@ -1,72 +1,38 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doctor Dashboard - MediVault</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" th:href="@{/css/main.css}">
-    <link rel="stylesheet" th:href="@{/css/doctor-dashboard.css}">
-</head>
-<body>
-    <header>
-        <div class="topbar">
-            <div class="centered-container gap-15">
-                <img th:src="@{/icons/logo.png}" alt="MediVault" class="width-60"/>
-                <span id="topbar-doctor-name" class="font-20">Doctor Portal</span>
-            </div>
-            <div class="centered-container gap-15">
-                <a th:href="@{/doctor/dashboard}" class="btn-with-icon tooltip-button">
-                    <img th:src="@{/icons/home.png}" alt="Dashboard" class="icon width-40">
-                    <span class="tooltip tooltip-bottom">Dashboard</span>
-                </a>
-                <a href="/logout" class="btn-with-icon tooltip-button">
-                    <img th:src="@{/icons/logout.png}" alt="Logout" class="icon width-40">
-                    <span class="tooltip tooltip-bottom">Logout</span>
-                </a>
-            </div>
+<div th:fragment="frag-doctor-dashboard"  class="dashboard-container">
+    <div class="doctor-info-card" id="doctorInfo">
+        <h2 id="doctorName">Loading...</h2>
+        <p id="doctorOrg"></p>
+        <div class="cert-badge" id="certBadge">
+            <span>Certificate Serial: </span>
+            <span id="certSerial"></span>
         </div>
-    </header>
+    </div>
 
-    <main>
-        <div class="dashboard-container">
-            <div class="doctor-info-card" id="doctorInfo">
-                <h2 id="doctorName">Loading...</h2>
-                <p id="doctorOrg"></p>
-                <div class="cert-badge" id="certBadge">
-                    <span>Certificate Serial: </span>
-                    <span id="certSerial"></span>
-                </div>
-            </div>
+    <div id="messageArea"></div>
 
-            <div id="messageArea"></div>
-
-            <div class="section-card">
-                <div class="section-title">Patients in Your Organization</div>
-                <div id="patientList" class="patient-list">
-                    <div class="loading">Loading patients...</div>
-                </div>
-            </div>
-
-            <div class="section-card" id="fileSection" style="display: none;">
-                <div class="section-title">
-                    Medical Records: <span id="selectedPatientName"></span>
-                </div>
-                <div id="fileList" class="file-list">
-                    <div class="empty-state">Select a patient to view their files</div>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-title">My Change Requests</div>
-                <div id="changeRequestList" class="file-list">
-                    <div class="loading">Loading change requests...</div>
-                </div>
-            </div>
+    <div class="section-card">
+        <div class="section-title">Patients in Your Organization</div>
+        <div id="patientList" class="patient-list">
+            <div class="loading">Loading patients...</div>
         </div>
-    </main>
+    </div>
+
+    <div class="section-card" id="fileSection" style="display: none;">
+        <div class="section-title">
+            Medical Records: <span id="selectedPatientName"></span>
+        </div>
+        <div id="fileList" class="file-list">
+            <div class="empty-state">Select a patient to view their files</div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-title">My Change Requests</div>
+        <div id="changeRequestList" class="file-list">
+            <div class="loading">Loading change requests...</div>
+        </div>
+    </div>
+
 
     <div class="modal" id="changeRequestModal">
         <div class="modal-content">
@@ -84,7 +50,4 @@
             </div>
         </div>
     </div>
-
-    <script th:src="@{/javascript/doctor-dashboard.js}"></script>
-</body>
-</html>
+</div>

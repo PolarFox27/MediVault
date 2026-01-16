@@ -24,7 +24,6 @@ public class AuditLogger {
      * @param extraData optional extra info (filename, IP, etc.)
      */
     public void logAction(Level level, String address, String actor, String action, String target, String extraData) {
-        System.out.println("Logging: " + host + ":" + port);
         long timestamp = System.currentTimeMillis();
         String logLine = String.format("%d|%s|%s|%s|%s|%s|%s",
                 timestamp,

@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -22,6 +24,9 @@ public class Patient {
     @Lob
     @Column(nullable = false)
     private byte[] handle;
+
+    @OneToMany
+    List<Doctor> appointedDoctors;
 
     /**
      * The medical organization this patient is registered with.

@@ -40,31 +40,6 @@ public class DoctorController {
     private final EncryptedFileRepository fileRepository;
     private final FileChangeRequestRepository changeRequestRepository;
 
-    @GetMapping("/dashboard")
-    public String dashboard(HttpServletRequest request, Model model) {
-        X509Certificate cert = extractCertificate(request);
-        if (cert == null) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_DASHBOARD", null, "No certificate found in request");
-            return "redirect:/";
-        }
-
-        try {
-            Doctor doctor = doctorAuthService.authenticateDoctor(cert);
-            model.addAttribute("doctor", doctor);
-            model.addAttribute("certSubject", cert.getSubjectX500Principal().getName());
-            model.addAttribute("certIssuer", cert.getIssuerX500Principal().getName());
-            model.addAttribute("certExpiry", cert.getNotAfter());
-            
-            List<Patient> patients = patientRepository.findAllByOrganization(doctor.getOrganization());
-            model.addAttribute("patients", patients);
-            model.addAttribute("patientCount", patients.size());
-            
-            return "pages/doctor/dashboard";
-        } catch (Exception e) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_DASHBOARD", null, "Unauthorized");
-            return "redirect:/";
-        }
-    }
 
     @GetMapping("/api/me")
     @ResponseBody
@@ -89,6 +64,63 @@ public class DoctorController {
         } catch (Exception e) {
             logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_DETAILS", null, "Unauthorized");
             return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/api/key")
+    @ResponseBody
+    public Doctor.DoctorKeyData getDoctorKey(HttpServletRequest request) {
+        X509Certificate cert = extractCertificate(request);
+        if (cert == null) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_KEY", null, "No certificate found in request");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        try {
+            Doctor doctor = doctorAuthService.authenticateDoctor(cert);
+
+            if(doctor.getPublicKey().length == 0) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_DOCTOR_KEY", null);
+            return doctor.getKeyData();
+        } catch (Exception e) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_DOCTOR_KEY", null, "Unauthorized");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @PostMapping("/api/key")
+    @ResponseBody
+    public void getDoctorKey(HttpServletRequest request, @RequestBody Doctor.DoctorKeyData keyData) {
+        X509Certificate cert = extractCertificate(request);
+        if (cert == null) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "SET_DOCTOR_KEY", null, "No certificate found in request");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        try {
+            Doctor doctor = doctorAuthService.authenticateDoctor(cert);
+
+            if(doctor.getPublicKey().length == 0) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            try {
+                doctor.fromKeyData(keyData);
+            }
+            catch (HexException e) {
+                logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "SET_DOCTOR_KEY", null, "Bad Request");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+            }
+
+
+            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "SET_DOCTOR_KEY", null);
+
+        } catch (Exception e) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "SET_DOCTOR_KEY", null, "Unauthorized");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
     }
 

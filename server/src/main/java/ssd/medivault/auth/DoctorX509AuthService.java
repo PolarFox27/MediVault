@@ -14,11 +14,9 @@ import java.util.Optional;
 
 /**
  * Service for authenticating doctors via X.509 client certificates.
- * 
  * Extracts identity from certificate Subject:
  * - CN (Common Name) = Doctor's full name
  * - O (Organization) = Medical organization
- * 
  * Security: No passwords involved - authentication is based on
  * cryptographic proof of private key possession during TLS handshake.
  */

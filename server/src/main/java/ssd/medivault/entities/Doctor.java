@@ -1,8 +1,10 @@
 package ssd.medivault.entities;
 
+import com.yubico.webauthn.data.exception.HexException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import ssd.medivault.utils.EncodingUtils;
 
 import java.time.LocalDateTime;
 
@@ -18,7 +20,6 @@ import java.time.LocalDateTime;
  * - Non-repudiation is provided by the certificate signature
  */
 @Entity
-@Table(name = "doctors")
 @Getter
 @Setter
 public class Doctor {
@@ -45,6 +46,19 @@ public class Doctor {
     @Column(nullable = false)
     private LocalDateTime lastLogin;
 
+    @Lob
+    @Column(nullable = false)
+    private byte[] publicKey;
+
+    @Column(nullable = false)
+    private byte[] encryptedPrivateKey;
+
+    @Column(nullable = false)
+    private byte[] encryptedPrivateKeyIv;
+
+    @Column(nullable = false)
+    private byte[] encryptedPrivateKeySalt;
+
     public Doctor() {}
 
     public Doctor(String fullName, String organization, String certificateSerialNumber, String certificateIssuer) {
@@ -54,6 +68,11 @@ public class Doctor {
         this.certificateIssuer = certificateIssuer;
         this.firstLogin = LocalDateTime.now();
         this.lastLogin = LocalDateTime.now();
+
+        this.publicKey = new byte[]{};
+        this.encryptedPrivateKey = new byte[]{};
+        this.encryptedPrivateKeyIv = new byte[]{};
+        this.encryptedPrivateKeySalt = new byte[]{};
     }
 
     public void updateLastLogin() { this.lastLogin = LocalDateTime.now(); }
@@ -61,5 +80,21 @@ public class Doctor {
     @Override
     public String toString() {
         return "Doctor{id=" + id + ", fullName='" + fullName + "', organization='" + organization + "'}";
+    }
+
+    public record DoctorKeyData(String publicKey, String privateKey, String privateKeySalt, String privateKeyIv) {}
+
+    public DoctorKeyData getKeyData(){
+        return new DoctorKeyData(EncodingUtils.toHex(this.publicKey),
+                EncodingUtils.toHex(this.encryptedPrivateKey),
+                EncodingUtils.toHex(this.encryptedPrivateKeySalt),
+                EncodingUtils.toHex(this.encryptedPrivateKeyIv));
+    }
+
+    public void fromKeyData(DoctorKeyData data) throws HexException {
+        this.publicKey = EncodingUtils.fromHex(data.publicKey);
+        this.encryptedPrivateKey = EncodingUtils.fromHex(data.privateKey);
+        this.encryptedPrivateKeySalt = EncodingUtils.fromHex(data.privateKeySalt);
+        this.encryptedPrivateKeyIv = EncodingUtils.fromHex(data.privateKeyIv);
     }
 }
