@@ -6,8 +6,11 @@ import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -19,9 +22,14 @@ import ssd.medivault.auth.WebAuthnRegistrationService;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.entities.PatientAuthenticator;
 import ssd.medivault.logging.AuditLogger;
+import ssd.medivault.controllers.dto.FinishLoginRequest;
+import ssd.medivault.controllers.dto.FinishRegistrationRequest;
+import ssd.medivault.controllers.dto.LoginRequest;
+import ssd.medivault.controllers.dto.RegisterRequest;
 import ssd.medivault.utils.EncodingUtils;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.Random;
 
 @Controller
@@ -34,37 +42,63 @@ public class PatientAuthController {
     private final AuditLogger logger;
 
     /**
+     * Canonicalizes input by trimming whitespace and normalizing Unicode characters.
+     * This prevents issues with different Unicode representations and extra spaces.
+     */
+    private String canonicalizeInput(String input) {
+        if (input == null) return null;
+        return Normalizer.normalize(input.trim(), Normalizer.Form.NFC);
+    }
+
+    /**
      * This function is the start endpoint of the WebAuthn registration protocol.
      * It creates a new Patient object with a random id, then returns the webauthn credentials options to the client.
      *
+     * @param request the validated registration request
+     * @param httpRequest the HTTP request object
      * @param session the HTTP session object, used to store some attributes for the registration.
      * @return the credentials options to be sent to the client, in JSON format.
      */
     @PostMapping("/webauthn/register/start")
     @ResponseBody
-    public String startPatientRegistration(@RequestParam String captchaToken,
-                                           HttpServletRequest request,
+    public ResponseEntity<?> startPatientRegistration(@Valid @ModelAttribute RegisterRequest request,
+                                           HttpServletRequest httpRequest,
                                            HttpSession session) {
+        try {
+            // Canonicalize inputs
+            String canonicalName = canonicalizeInput(request.name());
+            String canonicalCredname = canonicalizeInput(request.credname());
 
-        if (!hCaptchaService.verify(captchaToken, request.getRemoteAddr())) {
-            logger.logAction(AuditLogger.Level.WARN, "Non-authenticated User", "PATIENT_START_REGISTRATION", null, "Failed Captcha");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Captcha verification failed");
+            if (!hCaptchaService.verify(request.captchaToken(), httpRequest.getRemoteAddr())) {
+                logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_REGISTRATION", null, "Failed Captcha");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\": \"Captcha verification failed\", \"status\": 403}");
+            }
+
+            // Generate a random 32-bytes user handle for the patient
+            byte[] bytes = new byte[32];
+            new Random().nextBytes(bytes);
+            ByteArray id = new ByteArray(bytes);
+
+            // Create a user identity object and a Patient object
+            UserIdentity userIdentity = UserIdentity.builder()
+                    .name(id.getHex().substring(0, 16))
+                    .displayName(id.getHex().substring(0, 16))
+                    .id(id)
+                    .build();
+            Patient patient = new Patient(userIdentity);
+            logger.logAction(AuditLogger.Level.INFO, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_REGISTRATION", null);
+            String jsonResponse = registrationService.createJsonCredentialRegistrationOptions(patient, session);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(jsonResponse);
+        } catch (Exception e) {
+            logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_REGISTRATION", null, "Registration start failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"error\": \"Registration start failed: " + e.getMessage() + "\", \"status\": 400}");
         }
-
-        // Generate a random 32-bytes user handle for the patient
-        byte[] bytes = new byte[32];
-        new Random().nextBytes(bytes);
-        ByteArray id = new ByteArray(bytes);
-
-        // Create a user identity object and a Patient object
-        UserIdentity userIdentity = UserIdentity.builder()
-                .name(id.getHex().substring(0, 16))
-                .displayName(id.getHex().substring(0, 16))
-                .id(id)
-                .build();
-        Patient patient = new Patient(userIdentity);
-        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_REGISTRATION", null);
-        return registrationService.createJsonCredentialRegistrationOptions(patient, session);
     }
 
     /**
@@ -81,28 +115,39 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/register/finish")
     @ResponseBody
-    public PatientAuthenticator.KeyRecord finishPatientRegistration(@RequestParam String credential,
-                                                                    @RequestParam String credname,
+    public ResponseEntity<?> finishPatientRegistration(@Valid @ModelAttribute FinishRegistrationRequest request,
                                                                     HttpSession session,
-                                                                    HttpServletRequest request) {
-        // Complete the registration
-        WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
-                credential);
+                                                                    HttpServletRequest httpRequest) {
+        try {
+            // Canonicalize credname
+            String canonicalCredname = canonicalizeInput(request.credname());
 
-        // Store the patient and their authenticator in the database
-        Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());
-        PatientAuthenticator patientAuth = new PatientAuthenticator(registration.result(),
-                registration.pkc().getResponse(),
-                savedPatient,
-                credname);
-        credentialService.getAuthRepository().save(patientAuth);
+            // Complete the registration
+            WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
+                    request.credential());
 
-        // Authenticate the patient
-        AuthenticationToken.authenticatePatient(savedPatient.getUsername(),
-                EncodingUtils.toHex(patientAuth.getCredentialId()),
-                request);
-        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + savedPatient.getUsername(), "PATIENT_FINISH_REGISTRATION", null);
-        return patientAuth.toKeyRecord();
+            // Store the patient and their authenticator in the database
+            Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());
+            PatientAuthenticator patientAuth = new PatientAuthenticator(registration.result(),
+                    registration.pkc().getResponse(),
+                    savedPatient,
+                    canonicalCredname);
+            credentialService.getAuthRepository().save(patientAuth);
+
+            // Authenticate the patient
+            AuthenticationToken.authenticatePatient(savedPatient.getUsername(),
+                    EncodingUtils.toHex(patientAuth.getCredentialId()),
+                    httpRequest);
+            logger.logAction(AuditLogger.Level.INFO, httpRequest.getRemoteAddr(), "Patient:" + savedPatient.getUsername(), "PATIENT_FINISH_REGISTRATION", null);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(patientAuth.toKeyRecord());
+        } catch (Exception e) {
+            logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_REGISTRATION", null, "Registration failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"error\": \"Registration failed: " + e.getMessage() + "\", \"status\": 400}");
+        }
     }
 
     /**
@@ -114,13 +159,15 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/login/start")
     @ResponseBody
-    public String startPatientLogin(@RequestParam String captchaToken,
-                                    HttpServletRequest request,
+    public ResponseEntity<?> startPatientLogin(@Valid @ModelAttribute LoginRequest request,
+                                    HttpServletRequest httpRequest,
                                     HttpSession session) {
 
-        if (!hCaptchaService.verify(captchaToken, request.getRemoteAddr())) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null, "Failed Captcha");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Captcha verification failed");
+        if (!hCaptchaService.verify(request.captchaToken(), httpRequest.getRemoteAddr())) {
+            logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null, "Failed Captcha");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"error\": \"Captcha verification failed\", \"status\": 403}");
         }
 
         // Create the assertion to be sent to the client
@@ -130,11 +177,16 @@ public class PatientAuthController {
         try {
             // Try sending it to the client as JSON
             session.setAttribute("assertionRequest", assertionRequest);
-            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null);
-            return assertionRequest.toCredentialsGetJson();
+            logger.logAction(AuditLogger.Level.INFO, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null);
+            String jsonResponse = assertionRequest.toCredentialsGetJson();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(jsonResponse);
         } catch (JsonProcessingException e) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null, "Bad Request");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+            logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_START_LOGIN", null, "Bad Request");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"error\": \"Failed to process JSON\", \"status\": 400}");
         }
     }
 
@@ -150,13 +202,13 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/login/finish")
     @ResponseBody
-    public PatientAuthenticator.KeyRecord finishPatientLogin(@RequestParam String credential,
+    public ResponseEntity<?> finishPatientLogin(@Valid @ModelAttribute FinishLoginRequest request,
                                      HttpSession session,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest httpRequest) {
         try {
             // Build the assertion result from the client response and the stored request in the HTTP session
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> pkc;
-            pkc = PublicKeyCredential.parseAssertionResponseJson(credential);
+            pkc = PublicKeyCredential.parseAssertionResponseJson(request.credential());
             AssertionRequest req = (AssertionRequest)session.getAttribute("assertionRequest");
             AssertionResult result = registrationService.getRelyingParty().finishAssertion(FinishAssertionOptions.builder()
                     .request(req)
@@ -169,23 +221,31 @@ public class PatientAuthController {
                         result.getSignatureCount());
 
                 if(authenticator == null) {
-                    logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
-                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed");
+                    logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body("{\"error\": \"Authentication failed\", \"status\": 401}");
                 }
 
                 AuthenticationToken.authenticatePatient(result.getUsername(),
                                                         EncodingUtils.toHex(authenticator.getCredentialId()),
-                                                        request);
-                logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + result.getUsername(), "PATIENT_FINISH_LOGIN", null);
-                return authenticator.toKeyRecord();
+                                                        httpRequest);
+                logger.logAction(AuditLogger.Level.INFO, httpRequest.getRemoteAddr(), "Patient:" + result.getUsername(), "PATIENT_FINISH_LOGIN", null);
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(authenticator.toKeyRecord());
             } else {
-                logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed");
+                logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\": \"Authentication failed\", \"status\": 401}");
             }
 
         } catch (IOException | AssertionFailedException e) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication failed", e);
+            logger.logAction(AuditLogger.Level.WARN, httpRequest.getRemoteAddr(), "Non-authenticated User", "PATIENT_FINISH_LOGIN", null, "Failed Authentication");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"error\": \"Authentication failed: " + e.getMessage() + "\", \"status\": 401}");
         }
     }
 
@@ -202,11 +262,12 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/newkey/start")
     @ResponseBody
-    public String startNewKeyRegistration(HttpServletRequest request, HttpSession session, Authentication auth) {
+    public ResponseEntity<?> startNewKeyRegistration(HttpServletRequest request, HttpSession session, Authentication auth) {
 
         Patient patient = credentialService.extractPatient(auth, "PATIENT_NEWKEY_START", request);
         logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + patient.getUsername(), "PATIENT_NEWKEY_START", null);
-        return registrationService.createJsonCredentialRegistrationOptions(patient, session);
+        String jsonResponse = registrationService.createJsonCredentialRegistrationOptions(patient, session);
+        return ResponseEntity.ok(jsonResponse);
     }
 
     /**
@@ -222,23 +283,33 @@ public class PatientAuthController {
      */
     @PostMapping("/webauthn/newkey/finish")
     @ResponseBody
-    public PatientAuthenticator.KeyRecord finishNewKeyRegistration(@RequestParam String credential,
+    public ResponseEntity<?> finishNewKeyRegistration(@RequestParam String credential,
                                                                    @RequestParam String credname,
                                                                    HttpSession session,
                                                                    HttpServletRequest request) {
-        // Complete the registration
-        WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
-                credential);
+        try {
+            // Canonicalize credname
+            String canonicalCredname = canonicalizeInput(credname);
 
-        // Store the patient and their authenticator in the database
-        Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());
-        PatientAuthenticator patientAuth = new PatientAuthenticator(registration.result(),
-                registration.pkc().getResponse(),
-                savedPatient,
-                credname);
-        PatientAuthenticator savedAuth = credentialService.getAuthRepository().save(patientAuth);
-        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + savedPatient.getUsername(), "PATIENT_NEWKEY_FINISH", null);
-        return savedAuth.toKeyRecord();
+            // Complete the registration
+            WebAuthnRegistrationService.RegistrationRecord registration = registrationService.completeRegistration(session,
+                    credential);
+
+            // Store the patient and their authenticator in the database
+            Patient savedPatient = credentialService.getPatientRepository().save(registration.patient());
+            PatientAuthenticator patientAuth = new PatientAuthenticator(registration.result(),
+                    registration.pkc().getResponse(),
+                    savedPatient,
+                    canonicalCredname);
+            PatientAuthenticator savedAuth = credentialService.getAuthRepository().save(patientAuth);
+            logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + savedPatient.getUsername(), "PATIENT_NEWKEY_FINISH", null);
+            return ResponseEntity.ok(savedAuth.toKeyRecord());
+        } catch (Exception e) {
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "PATIENT_NEWKEY_FINISH", null, "Registration failed");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"error\": \"Registration failed: " + e.getMessage() + "\", \"status\": 400}");
+        }
     }
 
     /**
