@@ -1,5 +1,6 @@
 let DOB = null;
 let FULL_NAME = null;
+let DETAILS_FEK = new Uint8Array(0);
 
 
 // Show/Hide the new key registration box
@@ -53,10 +54,10 @@ async function savePersonalDetails() {
         return;
     }
 
-    const fek = crypto.getRandomValues(new Uint8Array(32));
-    const encryptedDob = await encrypt(stringToUint8Array(dobInput.value), fek);
-    const encryptedName = await encrypt(stringToUint8Array(nameInput.value), fek);
-    const encryptedFek = await encrypt(fek);
+    DETAILS_FEK = crypto.getRandomValues(new Uint8Array(32));
+    const encryptedDob = await encrypt(stringToUint8Array(dobInput.value), DETAILS_FEK);
+    const encryptedName = await encrypt(stringToUint8Array(nameInput.value), DETAILS_FEK);
+    const encryptedFek = await encrypt(DETAILS_FEK);
     const request = {
         dob: uint8ArrayToHex(encryptedDob.encryptedData),
         dobIv: uint8ArrayToHex(encryptedDob.iv),
@@ -80,8 +81,8 @@ async function savePersonalDetails() {
     const body = await Promise.all(
         APPOINTED_DOCTORS.map(async d => ({
             doctorId: d.id,
-            fek: uint8ArrayToHex(
-                await rsaEncrypt(hexToUint8Array(d.publicKey), fek)
+            encryptedFek: uint8ArrayToHex(
+                await rsaEncrypt(hexToUint8Array(d.publicKey), DETAILS_FEK)
             )
         }))
     );
@@ -100,6 +101,11 @@ async function savePersonalDetails() {
     loadWelcomeMessage();
 }
 
+/**
+ * Fetch and decrypts the patient personal information
+ *
+ * @returns {Promise<void>}
+ */
 async function fetchPersonalDetails() {
     const response = await fetch("/patient/details", {
         method: "GET",
@@ -111,17 +117,23 @@ async function fetchPersonalDetails() {
 
     const result = await initialCheckStatus(response);
 
-    const fek = await decrypt(hexToUint8Array(result.fek), hexToUint8Array(result.fekIv));
-    DOB = uint8ArrayToString(await decrypt(hexToUint8Array(result.dob), hexToUint8Array(result.dobIv), fek));
-    FULL_NAME = uint8ArrayToString(await decrypt(hexToUint8Array(result.name), hexToUint8Array(result.nameIv), fek));
+    DETAILS_FEK = await decrypt(hexToUint8Array(result.fek), hexToUint8Array(result.fekIv));
+    DOB = uint8ArrayToString(await decrypt(hexToUint8Array(result.dob), hexToUint8Array(result.dobIv), DETAILS_FEK));
+    FULL_NAME = uint8ArrayToString(await decrypt(hexToUint8Array(result.name), hexToUint8Array(result.nameIv), DETAILS_FEK));
 }
 
+/**
+ * Load the patient personal information in the UI
+ */
 function loadPersonalDetails() {
     document.getElementById("name").value = FULL_NAME || '';
     document.getElementById("dob").value = DOB || '';
     loadWelcomeMessage();
 }
 
+/**
+ * Update the navigation bar to greet the patient with their name
+ */
 function loadWelcomeMessage(){
     const welcomeEl = document.getElementById("welcome-message");
     if (welcomeEl && FULL_NAME) {

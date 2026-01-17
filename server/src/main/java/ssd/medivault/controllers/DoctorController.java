@@ -14,19 +14,13 @@ import ssd.medivault.auth.DoctorX509AuthService;
 import ssd.medivault.data.EncryptedFileRepository;
 import ssd.medivault.data.FileChangeRequestRepository;
 import ssd.medivault.data.PatientRepository;
-import ssd.medivault.entities.Doctor;
-import ssd.medivault.entities.EncryptedFile;
-import ssd.medivault.entities.FileChangeRequest;
-import ssd.medivault.entities.Patient;
+import ssd.medivault.entities.*;
 import ssd.medivault.logging.AuditLogger;
 import ssd.medivault.utils.EncodingUtils;
 import com.yubico.webauthn.data.exception.HexException;
 
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -41,6 +35,14 @@ public class DoctorController {
     private final FileChangeRequestRepository changeRequestRepository;
 
 
+    /**
+     * GET endpoint for the doctor personal information.
+     * The doctor identity is extracted from the certificate included in the request.
+     * If there is no certificate, an error code is returned.
+     *
+     * @param request the HTTP request object
+     * @return a Map containing the doctor personal information
+     */
     @GetMapping("/api/me")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getDoctorInfo(HttpServletRequest request) {
@@ -67,6 +69,14 @@ public class DoctorController {
         }
     }
 
+    /**
+     * GET endpoint for the doctor key pair. (plaintext public key and encrypted private key)
+     * The doctor identity is extracted from the certificate included in the request.
+     * If there is no certificate, an error code is returned.
+     *
+     * @param request the HTTP request object
+     * @return the doctor key pair
+     */
     @GetMapping("/api/key")
     @ResponseBody
     public Doctor.DoctorKeyData getDoctorKey(HttpServletRequest request) {
@@ -86,6 +96,14 @@ public class DoctorController {
         return doctor.getKeyData();
     }
 
+    /**
+     * POST endpoint for the doctor key pair. (plaintext public key and encrypted private key)
+     * The doctor identity is extracted from the certificate included in the request.
+     * If there is no certificate, an error code is returned.
+     * The doctor uploads their key pair here. It will be used by patients to share medical records securely.
+     *
+     * @param request the HTTP request object
+     */
     @PostMapping("/api/key")
     @ResponseBody
     public void setDoctorKey(HttpServletRequest request, @RequestBody Doctor.DoctorKeyData keyData) {
@@ -110,38 +128,66 @@ public class DoctorController {
         logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "SET_DOCTOR_KEY", null);
     }
 
+    /**
+     * GET endpoint for the doctor appointed patients.
+     * The doctor identity is extracted from the certificate included in the request.
+     * If there is no certificate, an error code is returned.
+     *
+     * @param request the HTTP request object
+     * @return the list of appointed patients
+     */
     @GetMapping("/api/patients")
     @ResponseBody
-    public ResponseEntity<?> getPatients(HttpServletRequest request) {
+    public List<PatientPrivateDetails.PatientPrivateDetailsRecord> getPatients(HttpServletRequest request) {
         Doctor doctor = authenticateRequest(request);
         if (doctor == null) {
             logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_APPOINTED_PATIENTS", null, "Unauthorized");
-            return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         Set<Patient> patients = doctor.getPatients();
 
-        System.out.println("#Patients: " + patients.size());
-        List<Map<String, Object>> patientList = patients.stream()
+        List<PatientPrivateDetails.PatientPrivateDetailsRecord> patientList = patients.stream()
             .map(p -> {
-                Map<String, Object> m = new HashMap<>();
-                m.put("id", p.getId());
-                m.put("username", p.getUsername());
-                return m;
+                String fek = p.getDoctorKeys().stream()
+                        .filter(k -> k.getDoctorId().equals(doctor.getId()))
+                        .findAny()
+                        .map(DoctorFekVersion::getEncryptedFek)
+                        .orElseThrow(() -> {
+                            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_APPOINTED_PATIENTS", null, "Unauthorized");
+                            return new ResponseStatusException(HttpStatus.FORBIDDEN);
+                        });
+                return new PatientPrivateDetails.PatientPrivateDetailsRecord(EncodingUtils.toHex(p.details.getDob()),
+                        EncodingUtils.toHex(p.details.getName()),
+                        EncodingUtils.toHex(p.details.getDobIv()),
+                        EncodingUtils.toHex(p.details.getNameIv()),
+                        fek, "", p.getId());
             })
             .collect(Collectors.toList());
 
         logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_APPOINTED_PATIENTS", null);
-        return ResponseEntity.ok(patientList);
+        return patientList;
     }
 
+
+    /**
+     * GET endpoint used by the doctor to retrieve the medical record of a patient.
+     * The doctor identity is extracted from the certificate included in the request.
+     * If there is no certificate, an error code is returned.
+     * If the doctor is not appointed to that patient, an error is returned.
+     *
+     * @param request the HTTP request object
+     * @param patientId the patient ID
+     * @return the doctor key pair
+     */
     @GetMapping("/api/patients/{patientId}/files")
     @ResponseBody
-    public ResponseEntity<?> getPatientFiles(@PathVariable Long patientId, HttpServletRequest request) {
+    public List<EncryptedFile.FileData> getPatientFiles(@PathVariable Long patientId, HttpServletRequest request) {
+
         Doctor doctor = authenticateRequest(request);
         if (doctor == null) {
             logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Non-authenticated User", "GET_PATIENT_FILES_AS_DOCTOR", null, "Unauthorized");
-            return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         Patient patient = patientRepository.findById(patientId)
@@ -150,19 +196,43 @@ public class DoctorController {
                 return new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found");
             });
 
-        if (!doctor.getOrganization().equals(patient.getOrganization())) {
+        if (patient.getAppointedDoctors().stream().noneMatch(d -> d.getId().equals(doctor.getId()))) {
             logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "GET_PATIENT_FILES_AS_DOCTOR", null, "Unauthorized");
-            return ResponseEntity.status(403).body(Map.of("error", "Patient not in your organization"));
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        List<EncryptedFile> files = fileRepository.findAllByPatient(patient);
-        List<EncryptedFile.FileData> fileList = files.stream()
-            .map(EncryptedFile::toRecord)
-            .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(fileList);
+        System.out.println("GETTING PATIENT FILES");
+        for(EncryptedFile f : fileRepository.findAllByPatient(patient)) {
+            System.out.println(f.getUpdatedAt().toEpochMilli() + " => " + f.getDoctorKeys().size());
+        }
+
+        return fileRepository.findAllByPatient(patient)
+                .stream()
+                .filter(f -> f.getDoctorKeys().stream().anyMatch(k -> k.getDoctorId().equals(doctor.getId())))
+                .map(f -> {
+                    String fek = f.getDoctorKeys()
+                            .stream()
+                            .filter(k -> k.getDoctorId().equals(doctor.getId()))
+                            .findAny()
+                            .map(DoctorFekVersion::getEncryptedFek)
+                            .orElse("");
+                    return new EncryptedFile.FileData(fek, "",
+                            EncodingUtils.toHex(f.getFilename()),
+                            EncodingUtils.toHex(f.getFilenameIv()),
+                            f.getUpdatedAt().toString(), f.getId());
+                })
+                .toList();
     }
 
+    /**
+     * GET endpoint used by the doctor to download a file from a patient's medical record.
+     * The doctor identity is extracted from the certificate included in the request.
+     * If there is no certificate, an error code is returned.
+     * If the doctor is not appointed to that patient, an error is returned.
+     *
+     * @param request the HTTP request object
+     * @return the doctor key pair
+     */
     @GetMapping(value = "/api/patients/{patientId}/files/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> downloadPatientFile(
             @PathVariable Long patientId, @PathVariable Long fileId, HttpServletRequest request) {
@@ -179,7 +249,7 @@ public class DoctorController {
                 return new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found");
             });
 
-        if (!doctor.getOrganization().equals(patient.getOrganization())) {
+        if (patient.getAppointedDoctors().stream().noneMatch(d -> d.getId().equals(doctor.getId()))) {
             logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null, "Unauthorized");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Patient not in your organization");
         }
@@ -191,7 +261,7 @@ public class DoctorController {
             });
 
         if (!file.getPatient().getId().equals(patient.getId())) {
-            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null, "Unauthorized");
+            logger.logAction(AuditLogger.Level.WARN, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", "File:" + fileId, "Unauthorized");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "File does not belong to this patient");
         }
 
@@ -200,122 +270,21 @@ public class DoctorController {
             outputStream.flush();
         };
 
-        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", null);
+        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Doctor:" + doctor.getFullName(), "DOWNLOAD_PATIENT_FILE_AS_DOCTOR", "File:" + fileId);
 
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"encrypted.bin\"")
             .header("X-File-IV", EncodingUtils.toHex(file.getDataIv()))
-            .header("X-FEK", EncodingUtils.toHex(file.getFek()))
-            .header("X-FEK-IV", EncodingUtils.toHex(file.getFekIv()))
-            .header("X-Filename", EncodingUtils.toHex(file.getFilename()))
-            .header("X-Filename-IV", EncodingUtils.toHex(file.getFilenameIv()))
             .contentLength(file.getData().length)
             .body(stream);
     }
 
-    @DeleteMapping("/api/patients/{patientId}/files/{fileId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePatientFile(@PathVariable Long patientId, @PathVariable Long fileId, HttpServletRequest request) {
-        Doctor doctor = authenticateRequest(request);
-        if (doctor == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
-        }
-
-        Patient patient = patientRepository.findById(patientId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
-
-        if (!doctor.getOrganization().equals(patient.getOrganization())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Patient not in your organization");
-        }
-
-        EncryptedFile file = fileRepository.findById(fileId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
-
-        if (!file.getPatient().getId().equals(patient.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "File does not belong to this patient");
-        }
-
-        fileRepository.delete(file);
-    }
-
-    @PostMapping("/api/patients/{patientId}/files/{fileId}/change-request")
-    @ResponseBody
-    public ResponseEntity<?> createChangeRequest(
-            @PathVariable Long patientId, @PathVariable Long fileId,
-            @RequestBody Map<String, String> payload, HttpServletRequest request) {
-        
-        Doctor doctor = authenticateRequest(request);
-        if (doctor == null) {
-            return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
-        }
-
-        Patient patient = patientRepository.findById(patientId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
-
-        if (!doctor.getOrganization().equals(patient.getOrganization())) {
-            return ResponseEntity.status(403).body(Map.of("error", "Patient not in your organization"));
-        }
-
-        EncryptedFile file = fileRepository.findById(fileId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
-
-        if (!file.getPatient().getId().equals(patient.getId())) {
-            return ResponseEntity.status(403).body(Map.of("error", "File does not belong to this patient"));
-        }
-
-        FileChangeRequest changeRequest = new FileChangeRequest();
-        changeRequest.setDoctor(doctor);
-        changeRequest.setPatient(patient);
-        changeRequest.setTargetFile(file);
-        
-        try {
-            if (payload.containsKey("encryptedComment")) {
-                changeRequest.setEncryptedComment(EncodingUtils.fromHex(payload.get("encryptedComment")));
-            }
-            if (payload.containsKey("encryptedCommentIv")) {
-                changeRequest.setEncryptedCommentIv(EncodingUtils.fromHex(payload.get("encryptedCommentIv")));
-            }
-        } catch (HexException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid hex encoding"));
-        }
-
-        FileChangeRequest saved = changeRequestRepository.save(changeRequest);
-
-        return ResponseEntity.ok(Map.of(
-            "id", saved.getId(),
-            "status", saved.getStatus().toString(),
-            "createdAt", saved.getCreatedAt().toString()
-        ));
-    }
-
-    @GetMapping("/api/change-requests")
-    @ResponseBody
-    public ResponseEntity<?> getMyChangeRequests(HttpServletRequest request) {
-        Doctor doctor = authenticateRequest(request);
-        if (doctor == null) {
-            return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
-        }
-
-        List<FileChangeRequest> requests = changeRequestRepository.findAllByDoctor(doctor);
-        List<Map<String, Object>> result = requests.stream()
-            .map(r -> {
-                Map<String, Object> m = new HashMap<>();
-                m.put("id", r.getId());
-                m.put("patientId", r.getPatient().getId());
-                m.put("patientUsername", r.getPatient().getUsername());
-                m.put("fileId", r.getTargetFile().getId());
-                m.put("status", r.getStatus().toString());
-                m.put("createdAt", r.getCreatedAt().toString());
-                if (r.getResolvedAt() != null) {
-                    m.put("resolvedAt", r.getResolvedAt().toString());
-                }
-                return m;
-            })
-            .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(result);
-    }
-
+    /**
+     * Helper function to extract the doctor identity from the certificate present in the HTTP request.
+     *
+     * @param request the HTTP request object
+     * @return the authenticated doctor, or null
+     */
     private Doctor authenticateRequest(HttpServletRequest request) {
         X509Certificate cert = extractCertificate(request);
         if (cert == null) return null;
@@ -326,6 +295,12 @@ public class DoctorController {
         }
     }
 
+    /**
+     * Helper function to extract the certificate from the HTTP request.
+     *
+     * @param request the HTTP request object
+     * @return the certificate
+     */
     private X509Certificate extractCertificate(HttpServletRequest request) {
         X509Certificate[] certs = (X509Certificate[]) request.getAttribute("jakarta.servlet.request.X509Certificate");
         if (certs != null && certs.length > 0) {

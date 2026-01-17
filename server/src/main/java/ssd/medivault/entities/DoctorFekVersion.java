@@ -14,7 +14,7 @@ public class DoctorFekVersion {
     @Column
     private Long doctorId;
 
-    @Column
+    @Column(length = 1024)
     private String encryptedFek;
 
     public DoctorFekVersion(){

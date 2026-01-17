@@ -19,35 +19,10 @@
 
     <div class="section-card" id="fileSection" style="display: none;">
         <div class="section-title">
-            Medical Records: <span id="selectedPatientName"></span>
+            Medical Records <span id="selectedPatientName"></span>
         </div>
         <div id="fileList" class="file-list">
             <div class="empty-state">Select a patient to view their files</div>
-        </div>
-    </div>
-
-    <div class="section-card">
-        <div class="section-title">My Change Requests</div>
-        <div id="changeRequestList" class="file-list">
-            <div class="loading">Not Implemented Yet</div>
-        </div>
-    </div>
-
-
-    <div class="modal" id="changeRequestModal">
-        <div class="modal-content">
-            <div class="modal-title">Request Changes to Medical Record</div>
-            <div class="form-group">
-                <label>File: <span id="modalFileName" style="font-weight: normal;"></span></label>
-            </div>
-            <div class="form-group">
-                <label for="changeDescription">Describe the requested changes:</label>
-                <textarea id="changeDescription" placeholder="Enter your suggested changes or corrections to this medical record..."></textarea>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitChangeRequest()">Submit Request</button>
-            </div>
         </div>
     </div>
 </div>

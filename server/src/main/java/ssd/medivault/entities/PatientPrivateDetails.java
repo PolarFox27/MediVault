@@ -52,14 +52,15 @@ public class PatientPrivateDetails {
         this.fekIv = new byte[]{};
     }
 
-    public record PatientPrivateDetailsRecord(String dob, String name, String dobIv, String nameIv, String fek, String fekIv) {}
+    public record PatientPrivateDetailsRecord(String dob, String name, String dobIv, String nameIv, String fek, String fekIv, Long id) {}
 
-    public PatientPrivateDetailsRecord toRecord(){
+    public PatientPrivateDetailsRecord toRecord(Long id){
         return new PatientPrivateDetailsRecord(EncodingUtils.toHex(this.dob),
                 EncodingUtils.toHex(this.name),
                 EncodingUtils.toHex(this.dobIv),
                 EncodingUtils.toHex(this.nameIv),
                 EncodingUtils.toHex(this.fek),
-                EncodingUtils.toHex(this.fekIv));
+                EncodingUtils.toHex(this.fekIv),
+                id);
     }
 }

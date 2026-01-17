@@ -105,12 +105,19 @@ async function selectDoctor(doctorId) {
 
     const body = await Promise.all(
         FILES.map(async f => ({
-            doctorId: doctorId,
-            fek: uint8ArrayToHex(
+            doctorId: f.id,
+            encryptedFek: uint8ArrayToHex(
                 await rsaEncrypt(hexToUint8Array(publicKey), f.fek)
             )
         }))
     );
+
+    const body2 = [{
+        doctorId: doctorId,
+        encryptedFek: uint8ArrayToHex(
+            await rsaEncrypt(hexToUint8Array(publicKey), DETAILS_FEK)
+        )
+    }];
 
 
     showConfirm(
@@ -126,6 +133,15 @@ async function selectDoctor(doctorId) {
                 },
                 body: JSON.stringify(body)
             }).then(() => fetchDoctors());
+
+            fetch("/patient/details/fek", {
+                method: 'PUT',
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body2)
+            });
         }
     );
 }

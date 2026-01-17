@@ -246,10 +246,8 @@ async function register() {
         CURRENT_CREDENTIALS = await registerKey("/webauthn/register");
         showConfirm("Confirm this key as encryption method.", "Yes", "", () => {
             sendEncryptedUmk(CURRENT_CREDENTIALS.credentialId).then(() => {
-                fetchDoctors().then(() => {
-                    savePersonalDetails().then(() => {
-                        navigate("/patient/dashboard");
-                    })
+                savePersonalDetails().then(() => {
+                    navigate("/patient/dashboard");
                 });
             })
         });

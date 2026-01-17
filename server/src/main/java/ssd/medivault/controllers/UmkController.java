@@ -110,7 +110,7 @@ public class UmkController {
         Patient patient = credentialService.extractPatient(auth, "PATIENT_GET_DETAILS", request);
 
         logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + patient.getUsername(), "PATIENT_GET_DETAILS", null);
-        return patient.getDetails().toRecord();
+        return patient.getDetails().toRecord(patient.getId());
     }
 }
 

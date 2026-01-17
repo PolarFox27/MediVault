@@ -1,5 +1,11 @@
 let FILES = []
 
+/**
+ * Create the HTML element representing a file with appropriate download/delete callbacks
+ *
+ * @param file the file to represent
+ * @returns {HTMLDivElement}
+ */
 function renderFile(file) {
     // Create div
     const div = document.createElement("div");
@@ -64,6 +70,12 @@ function renderFile(file) {
     return div;
 }
 
+/**
+ * Decrypt a file DTO from the server into a usable file object with decrypted attributes
+ *
+ * @param file
+ * @returns {Promise<{id: *, filename: string, updatedAt: string, fek: Uint8Array<ArrayBufferLike> | Uint8Array<ArrayBuffer>}>}
+ */
 async function decryptFile(file) {
     const fek = await decrypt(hexToUint8Array(file.fek), hexToUint8Array(file.fekIv));
     const name = await decrypt(hexToUint8Array(file.name), hexToUint8Array(file.nameIv), fek);
@@ -76,6 +88,11 @@ async function decryptFile(file) {
     }
 }
 
+/**
+ * Fetch the file details (everything except the actual file content) from the server.
+ *
+ * @returns {Promise<void>}
+ */
 async function fetchAndRenderFiles(){
     let box = document.getElementById("files-box");
 
@@ -98,6 +115,9 @@ async function fetchAndRenderFiles(){
     }
 }
 
+/**
+ * When the upload button is clicked, a file dialog is opened and the new file is encrypted then sent to the server
+ */
 function openFileInput(){
     const input = document.getElementById("uploadFileInput");
     if (!input) {
@@ -142,7 +162,7 @@ function openFileInput(){
             const body = await Promise.all(
                 APPOINTED_DOCTORS.map(async d => ({
                     doctorId: d.id,
-                    fek: uint8ArrayToHex(
+                    encryptedFek: uint8ArrayToHex(
                         await rsaEncrypt(hexToUint8Array(d.publicKey), plaintextFek)
                     )
                 }))
@@ -170,6 +190,14 @@ function openFileInput(){
     input.click();
 }
 
+/**
+ * Downloads a given file from the server, decrypts it and asks to save it as a file on the computer.
+ *
+ * @param fileId
+ * @param filename
+ * @param fek
+ * @returns {Promise<void>}
+ */
 async function downloadFile(fileId, filename, fek){
     const response = await fetch(`/patient/files/${fileId}`, {
         method: "GET",

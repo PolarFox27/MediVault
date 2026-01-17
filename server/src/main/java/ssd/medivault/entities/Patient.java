@@ -44,13 +44,6 @@ public class Patient {
     )
     private List<DoctorFekVersion> doctorKeys = new ArrayList<>();
 
-    /**
-     * The medical organization this patient is registered with.
-     * Doctors from the same organization can access patient files.
-     */
-    @Column
-    private String organization;
-
     @Embedded
     public PatientPrivateDetails details;
 
