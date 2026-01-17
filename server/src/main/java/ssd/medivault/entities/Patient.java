@@ -7,7 +7,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -25,8 +28,21 @@ public class Patient {
     @Column(nullable = false)
     private byte[] handle;
 
-    @OneToMany
-    List<Doctor> appointedDoctors;
+    @ManyToMany
+    @JoinTable(
+            name = "patient_doctor",
+            joinColumns = @JoinColumn(name = "patient_id"),
+            inverseJoinColumns = @JoinColumn(name = "doctor_id")
+    )
+    private Set<Doctor> appointedDoctors = new HashSet<>();
+
+
+    @ElementCollection
+    @CollectionTable(
+            name = "doctor_keys_details",
+            joinColumns = @JoinColumn(name = "patient_id")
+    )
+    private List<DoctorFekVersion> doctorKeys = new ArrayList<>();
 
     /**
      * The medical organization this patient is registered with.

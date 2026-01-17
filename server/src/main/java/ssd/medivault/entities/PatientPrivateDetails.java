@@ -6,8 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 import ssd.medivault.utils.EncodingUtils;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Class storing the full name and date of birth of patients in an encrypted form
@@ -42,15 +42,6 @@ public class PatientPrivateDetails {
     @Column(nullable = false)
     private byte[] fekIv;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(
-            name = "doctor_keys",
-            joinColumns = @JoinColumn(name = "entity_id")
-    )
-    @MapKeyColumn(name = "data_key")
-    @Column(name = "data_value")
-    @Lob
-    private Map<Long, byte[]> doctorKeys = new HashMap<>();
 
     public PatientPrivateDetails() {
         this.dob = new byte[]{};

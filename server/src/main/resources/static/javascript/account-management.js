@@ -76,6 +76,25 @@ async function savePersonalDetails() {
     });
 
     checkStatus(response);
+
+    const body = await Promise.all(
+        APPOINTED_DOCTORS.map(async d => ({
+            doctorId: d.id,
+            fek: uint8ArrayToHex(
+                await rsaEncrypt(hexToUint8Array(d.publicKey), fek)
+            )
+        }))
+    );
+
+    await fetch("/patient/details/fek", {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+    });
+
     DOB = dobInput.value;
     FULL_NAME = nameInput.value;
     loadWelcomeMessage();

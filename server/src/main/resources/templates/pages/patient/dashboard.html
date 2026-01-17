@@ -1,4 +1,4 @@
-<div th:fragment="frag-patient-dashboard" class="main-content relative fill-width">
+<div th:fragment="frag-patient-dashboard" class="main-content relative fill-width centered-container">
     <!-- Files Section -->
     <div class="files-section">
         <h3 class="section-title">My Files</h3>
@@ -11,13 +11,5 @@
 
         <input id="uploadFileInput" type="file" hidden />
         <div class="centered-container vertical-flex fill-width" id="files-box"></div>
-    </div>
-
-    <!-- Available Doctors Section -->
-    <div class="doctors-section">
-        <h3 class="section-title">Available Doctors</h3>
-        <div class="doctors-list" id="doctors-list">
-            <p class="loading-text">Loading doctors...</p>
-        </div>
     </div>
 </div>

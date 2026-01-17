@@ -229,7 +229,7 @@ async function registerKey(baseUrl = "/webauthn/register") {
 }
 
 
-// Performs the full registration procedure based on the given form data (the credential name)
+// Performs the full registration procedure based on the given form data
 async function register() {
     console.debug('register() called');
 
@@ -246,8 +246,10 @@ async function register() {
         CURRENT_CREDENTIALS = await registerKey("/webauthn/register");
         showConfirm("Confirm this key as encryption method.", "Yes", "", () => {
             sendEncryptedUmk(CURRENT_CREDENTIALS.credentialId).then(() => {
-                savePersonalDetails().then(() => {
-                    navigate("/patient/dashboard");
+                fetchDoctors().then(() => {
+                    savePersonalDetails().then(() => {
+                        navigate("/patient/dashboard");
+                    })
                 });
             })
         });

@@ -7,6 +7,8 @@ import lombok.Setter;
 import ssd.medivault.utils.EncodingUtils;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Entity representing a Doctor in the MediVault system.
@@ -62,6 +64,9 @@ public class Doctor {
     @Column(nullable = false)
     private byte[] encryptedPrivateKeySalt;
 
+    @ManyToMany(mappedBy = "appointedDoctors")
+    private Set<Patient> patients = new HashSet<>();
+
     public Doctor() {}
 
     public Doctor(String fullName, String organization, String certificateSerialNumber, String certificateIssuer) {
@@ -99,5 +104,22 @@ public class Doctor {
         this.encryptedPrivateKey = EncodingUtils.fromHex(data.privateKey);
         this.encryptedPrivateKeySalt = EncodingUtils.fromHex(data.privateKeySalt);
         this.encryptedPrivateKeyIv = EncodingUtils.fromHex(data.privateKeyIv);
+    }
+
+    /**
+     * Data Transfer Object for exposing safe doctor information to patients.
+     * Only contains non-sensitive, public fields extracted from doctor certificates.
+     * Security: This DTO intentionally excludes internal fields like certificateSerial
+     * to minimize data exposure following the principle of least privilege.
+     */
+    public record DoctorInfoDTO(
+            Long id,
+            String name,
+            String organization,
+            String publicKey
+    ) {}
+
+    public DoctorInfoDTO toDTO() {
+        return new DoctorInfoDTO(this.id, this.fullName, this.organization, EncodingUtils.toHex(this.publicKey));
     }
 }

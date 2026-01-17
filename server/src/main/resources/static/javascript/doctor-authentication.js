@@ -63,7 +63,6 @@ async function tryLogin(password) {
 
             UMK = await deriveKeyFromPasswordAndSalt(password, privateKeySalt);
             DOCTOR_PRIVATE_KEY = await decrypt(privateKey, privateKeyIv);
-            console.log("Key: ", DOCTOR_PRIVATE_KEY);
             navigate("/doctor/dashboard");
         }
         catch (e) {
@@ -115,8 +114,8 @@ async function generateAndSendKeys(password) {
     const privateKeyBuf = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
 
     const publicKey = uint8ArrayToHex(new Uint8Array(publicKeyBuf));
+
     DOCTOR_PRIVATE_KEY = new Uint8Array(privateKeyBuf);
-    console.log("Key: ", DOCTOR_PRIVATE_KEY);
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const privateKeySalt = uint8ArrayToHex(salt);
 
@@ -140,4 +139,48 @@ async function generateAndSendKeys(password) {
             privateKeySalt
         })
     });
+}
+
+
+async function rsaEncrypt(publicKey, data) {
+    const key = await crypto.subtle.importKey(
+        "spki",
+        publicKey.buffer,
+        {
+            name: "RSA-OAEP",
+            hash: "SHA-256",
+        },
+        false,
+        ["encrypt"]
+    );
+
+    const encrypted = await crypto.subtle.encrypt(
+        { name: "RSA-OAEP" },
+        key,
+        data
+    );
+
+    return new Uint8Array(encrypted);
+}
+
+
+async function rsaDecrypt(privateKey, encryptedData) {
+    const key = await crypto.subtle.importKey(
+        "pkcs8",
+        privateKey.buffer,
+        {
+            name: "RSA-OAEP",
+            hash: "SHA-256",
+        },
+        false,
+        ["decrypt"]
+    );
+
+    const decrypted = await crypto.subtle.decrypt(
+        { name: "RSA-OAEP" },
+        key,
+        encryptedData
+    );
+
+    return new Uint8Array(decrypted);
 }

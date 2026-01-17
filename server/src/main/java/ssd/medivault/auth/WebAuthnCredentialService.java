@@ -219,6 +219,9 @@ public class WebAuthnCredentialService implements CredentialRepository {
             patient.getDetails().setName(EncodingUtils.fromHex(details.name()));
             patient.getDetails().setDobIv(EncodingUtils.fromHex(details.dobIv()));
             patient.getDetails().setNameIv(EncodingUtils.fromHex(details.nameIv()));
+            patient.getDetails().setFek(EncodingUtils.fromHex(details.fek()));
+            patient.getDetails().setFekIv(EncodingUtils.fromHex(details.fekIv()));
+            patient.getDoctorKeys().clear();
             this.patientRepository.save(patient);
             return true;
         } catch (HexException e) {

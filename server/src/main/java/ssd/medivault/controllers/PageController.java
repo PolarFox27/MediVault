@@ -89,6 +89,21 @@ public class PageController {
     }
 
     /**
+     * GET Endpoint for the patient appointed doctors page.
+     * This endpoint is protected and only accessible to authenticated patients.
+     *
+     * @param request the HTTP Request object
+     * @return the appointed doctors model
+     */
+    @GetMapping("/patient/appointed-doctors")
+    public String patientAppointedDoctorsPage(HttpServletRequest request) {
+        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
+            return "pages/patient/appointed-doctors :: frag-appointed-doctors";
+        }
+        return "layout";
+    }
+
+    /**
      * GET Endpoint for the doctor header fragment.
      *
      * @param request the HTTP Request object
@@ -153,22 +168,6 @@ public class PageController {
 
         if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
             return "pages/patient/account :: frag-patient-account";
-        }
-        return "layout";
-    }
-
-    /**
-     * GET Endpoint for the patient doctor appointment page.
-     * This endpoint is protected and only accessible to authenticated patients.
-     *
-     * @param request the HTTP Request object
-     * @param auth the Authentication object to retrieve the patient keys.
-     * @return the patient account management model.
-     */
-    @GetMapping("/patient/appointed-doctors")
-    public String keyManagementPage(HttpServletRequest request, Authentication auth) {
-        if ("SPA".equalsIgnoreCase(request.getHeader("X-Requested-With"))) {
-            return "pages/patient/appointed-doctors :: frag-appointed-doctors";
         }
         return "layout";
     }

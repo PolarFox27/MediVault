@@ -7,7 +7,9 @@ import lombok.Setter;
 import ssd.medivault.utils.EncodingUtils;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Entity
@@ -49,15 +51,12 @@ public class EncryptedFile {
     @ManyToOne
     private Patient patient;
 
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection
     @CollectionTable(
-            name = "doctor_keys",
-            joinColumns = @JoinColumn(name = "entity_id")
+            name = "doctor_keys_files",
+            joinColumns = @JoinColumn(name = "encrypted_file_id")
     )
-    @MapKeyColumn(name = "data_key")
-    @Column(name = "data_value")
-    @Lob
-    private Map<Long, byte[]> doctorKeys = new HashMap<>();
+    private List<DoctorFekVersion> doctorKeys = new ArrayList<>();
 
     public EncryptedFile() {
         this.data = new byte[]{};

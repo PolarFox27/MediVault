@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -27,6 +26,7 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
@@ -119,7 +119,9 @@ public class DoctorController {
             return ResponseEntity.status(403).body(Map.of("error", "Authentication required"));
         }
 
-        List<Patient> patients = patientRepository.findAllByAppointedDoctorsContaining(doctor);
+        Set<Patient> patients = doctor.getPatients();
+
+        System.out.println("#Patients: " + patients.size());
         List<Map<String, Object>> patientList = patients.stream()
             .map(p -> {
                 Map<String, Object> m = new HashMap<>();

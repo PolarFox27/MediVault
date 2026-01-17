@@ -3,7 +3,9 @@ const DEFAULT_CALLBACKS = {
     "/patient/account": () => loadPersonalDetails(),
     "/auth/patient": () => renderCaptchas(),
     "/auth/doctor": () => renderDoctorCaptcha(),
-    "doctor/dashboard": () => loadDoctorDashboard()
+    "/doctor/dashboard": () => loadDoctorDashboard(),
+    "/welcome": () => cleanSensitiveVariables(),
+    "/patient/appointed-doctors": () => fetchDoctors()
 }
 
 
@@ -86,3 +88,9 @@ document.addEventListener("DOMContentLoaded", () => {
         navigate(location.pathname);
     }
 });
+
+// This function clear the encryption keys from the memory, preventing data remanence attacks.
+function cleanSensitiveVariables() {
+    if(UMK) UMK.fill(0);
+    if(DOCTOR_PRIVATE_KEY) DOCTOR_PRIVATE_KEY.fill(0);
+}

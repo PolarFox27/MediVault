@@ -1,3 +1,5 @@
+let FILES = []
+
 function renderFile(file) {
     // Create div
     const div = document.createElement("div");
@@ -88,8 +90,11 @@ async function fetchAndRenderFiles(){
 
     box.innerHTML = files.length === 0 ? "You have no files uploaded yet." : "";
 
+    FILES = [];
     for(const f of files){
-        box.appendChild(renderFile(await decryptFile(f)));
+        const decrypted = await decryptFile(f);
+        FILES.push(decrypted);
+        box.appendChild(renderFile(decrypted));
     }
 }
 
@@ -132,7 +137,26 @@ function openFileInput(){
                 body: form
             });
 
-            initialCheckStatus(response);
+            const result = await initialCheckStatus(response);
+
+            const body = await Promise.all(
+                APPOINTED_DOCTORS.map(async d => ({
+                    doctorId: d.id,
+                    fek: uint8ArrayToHex(
+                        await rsaEncrypt(hexToUint8Array(d.publicKey), plaintextFek)
+                    )
+                }))
+            );
+
+            await fetch("/patient/files/" + result + "/fek", {
+                method: 'PUT',
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body)
+            });
+
             await fetchAndRenderFiles();
         };
 
@@ -166,84 +190,4 @@ async function downloadFile(fileId, filename, fek){
     a.click();
 
     URL.revokeObjectURL(url);
-}
-
-/**
- * Fetch and display the list of available doctors.
- * Security: Uses authenticated session, receives only safe data via DTO.
- */
-async function fetchDoctors() {
-    try {
-        const response = await fetch('/patient/api/doctors', {
-            method: 'GET',
-            credentials: 'same-origin'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch doctors');
-        }
-        
-        const doctors = await response.json();
-        renderDoctorList(doctors);
-    } catch (error) {
-        console.error('Error fetching doctors:', error);
-        const container = document.getElementById('doctors-list');
-        if (container) {
-            container.innerHTML = '<p class="no-doctors-text">Failed to load doctors</p>';
-        }
-    }
-}
-
-/**
- * Render the list of doctors in the UI.
- * @param {Array} doctors - Array of doctor objects with id, name, organization
- */
-function renderDoctorList(doctors) {
-    const container = document.getElementById('doctors-list');
-    if (!container) return;
-    
-    if (doctors.length === 0) {
-        container.innerHTML = '<p class="no-doctors-text">No doctors available</p>';
-        return;
-    }
-    
-    container.innerHTML = doctors.map(doctor => `
-        <div class="doctor-card" data-doctor-id="${doctor.id}">
-            <div class="doctor-info">
-                <span class="doctor-name">${escapeHtml(doctor.name)}</span>
-                <span class="doctor-organization">${escapeHtml(doctor.organization)}</span>
-            </div>
-            <button class="doctor-select-btn" onclick="selectDoctor(${doctor.id}, '${escapeHtml(doctor.name)}')">
-                Select
-            </button>
-        </div>
-    `).join('');
-}
-
-/**
- * Escape HTML to prevent XSS attacks.
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-/**
- * Handle doctor selection (placeholder for future file sharing feature).
- * @param {number} doctorId - The selected doctor's ID
- * @param {string} doctorName - The selected doctor's name
- */
-function selectDoctor(doctorId, doctorName) {
-    // For now, just show a confirmation
-    showConfirm(
-        `You selected ${doctorName}. File sharing feature coming soon!`,
-        'OK',
-        'Cancel',
-        () => {
-            console.log('Selected doctor:', doctorId, doctorName);
-        }
-    );
 }

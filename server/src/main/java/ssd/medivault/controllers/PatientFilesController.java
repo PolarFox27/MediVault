@@ -12,10 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import ssd.medivault.auth.WebAuthnCredentialService;
-import ssd.medivault.data.DoctorRepository;
 import ssd.medivault.data.EncryptedFileRepository;
 import ssd.medivault.data.PatientRepository;
-import ssd.medivault.dto.DoctorInfoDTO;
 import ssd.medivault.entities.EncryptedFile;
 import ssd.medivault.entities.Patient;
 import ssd.medivault.logging.AuditLogger;
@@ -31,7 +29,6 @@ public class PatientFilesController {
 
     private final PatientRepository patientRepository;
     private final EncryptedFileRepository fileRepository;
-    private final DoctorRepository doctorRepository;
     private final WebAuthnCredentialService credentialService;
     private final AuditLogger logger;
 
@@ -182,25 +179,5 @@ public class PatientFilesController {
         logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + patient.getUsername(), "PATIENT_DELETE_FILE", "File:" + id);
         fileRepository.delete(f);
 
-    }
-
-    /**
-     * Get list of all available doctors.
-     * Security: Only authenticated patients can access this endpoint.
-     * Returns minimal information via DTO (id, name, organization only).
-     *
-     * @param authentication the patient authentication token
-     * @param request the HTTP request object
-     * @return list of doctors with safe, public information only
-     */
-    @GetMapping("/patient/api/doctors")
-    public List<DoctorInfoDTO> getAvailableDoctors(Authentication authentication, HttpServletRequest request) {
-        Patient patient = credentialService.extractPatient(authentication, "PATIENT_GET_DOCTORS", request);
-        
-        logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + patient.getUsername(), "PATIENT_GET_DOCTORS", null);
-        
-        return doctorRepository.findAll().stream()
-                .map(d -> new DoctorInfoDTO(d.getId(), d.getFullName(), d.getOrganization()))
-                .toList();
     }
 }
