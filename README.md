@@ -32,7 +32,7 @@ This README provides a **global setup guide** and directs you to specific docume
     - [5. Elasticsearch & Kibana](#5-elasticsearch--kibana)
 4. [Running the Project](#running-the-project)
 5. [Environment Variables](#environment-variables)
-6. [Security Notes](#security-notes)
+
 
 ---
 
@@ -175,6 +175,8 @@ Edit `.env` to configure secrets and paths:
 
 ---
 
-
+> **Note:**  
+> Firefox does not support WebAuthn when using a self-signed certificate.  
+> For testing WebAuthn features with self-signed certificates, it is recommended to use the Brave or Chrome browser instead.
 
 **For any component-specific instructions, always refer to the README in the corresponding directory.**
