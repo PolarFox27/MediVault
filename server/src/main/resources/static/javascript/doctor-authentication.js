@@ -5,6 +5,10 @@ function renderDoctorCaptcha() {
         try {
             window.doctorCaptchaWidgetId = hcaptcha.render('hcaptcha-doctor-login', {sitekey: 'e2cc3850-5ae4-487a-a932-570a206ccebe', size: 'invisible', callback: onDoctorLoginCaptcha});
             console.debug('hCaptcha widgets rendered', window.doctorCaptchaWidgetId);
+
+            fetch('/doctor/api/key').then(response => {
+                document.getElementById("doctor-auth-title").innerText = response.ok ? "Doctor Login" : "Doctor Registration";
+            });
         } catch (err) {
             console.warn('hcaptcha.render failed', err);
         }
