@@ -92,22 +92,12 @@ public class PatientDoctorsController {
             credentialService.getPatientRepository().save(patient);
             doctorRepository.save(doctor);
 
-            System.out.println("GETTING PATIENT FILES (Before appointing)");
-            for(EncryptedFile f : fileRepository.findAllByPatient(patient)) {
-                System.out.println(f.getUpdatedAt().toEpochMilli() + " => " + f.getDoctorKeys().size());
-            }
-
             for(DoctorFekVersion fek : feks) {
                 EncryptedFile f = fileRepository.findById(fek.getDoctorId()).orElse(null);
                 if(f == null) continue;
 
                 f.getDoctorKeys().add(new DoctorFekVersion(id, fek.getEncryptedFek()));
                 fileRepository.save(f);
-            }
-
-            System.out.println("GETTING PATIENT FILES (After appointing)");
-            for(EncryptedFile f : fileRepository.findAllByPatient(patient)) {
-                System.out.println(f.getUpdatedAt().toEpochMilli() + " => " + f.getDoctorKeys().size());
             }
 
             logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + patient.getUsername(), "PATIENT_APPOINT_DOCTOR", null);
@@ -166,11 +156,6 @@ public class PatientDoctorsController {
         file.getDoctorKeys().clear();
         file.getDoctorKeys().addAll(feks);
         fileRepository.save(file);
-
-        System.out.println("GETTING PATIENT FILES (Uploading file " + id + ")");
-        for(EncryptedFile f : fileRepository.findAllByPatient(patient)) {
-            System.out.println(f.getUpdatedAt().toEpochMilli() + " => " + f.getDoctorKeys().size());
-        }
 
         logger.logAction(AuditLogger.Level.INFO, request.getRemoteAddr(), "Patient:" + patient.getUsername(), "PATIENT_UPLOAD_FILE", "File:" + id);
     }
