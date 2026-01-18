@@ -53,6 +53,8 @@ public class PatientFilesController {
             @RequestPart("dataIv") MultipartFile dataIv,
             @RequestPart("filename") MultipartFile filename,
             @RequestPart("filenameIv") MultipartFile filenameIv,
+            @RequestPart("timestamp") MultipartFile timestamp,
+            @RequestPart("timestampIv") MultipartFile timestampIv,
             @RequestPart("fek") MultipartFile fek,
             @RequestPart("fekIv") MultipartFile fekIv,
             @RequestParam Long id,
@@ -72,6 +74,8 @@ public class PatientFilesController {
             f.setDataIv(dataIv.getBytes());
             f.setFilename(filename.getBytes());
             f.setFilenameIv(filenameIv.getBytes());
+            f.setTimestamp(timestamp.getBytes());
+            f.setTimestampIv(timestampIv.getBytes());
             f.setFek(fek.getBytes());
             f.setFekIv(fekIv.getBytes());
             f.setPatient(patient.get());

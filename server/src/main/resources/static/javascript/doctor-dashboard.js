@@ -111,11 +111,12 @@ async function loadPatients() {
 async function decryptFileForDoctor(file) {
     const fek = await rsaDecrypt(DOCTOR_PRIVATE_KEY, hexToUint8Array(file.fek));
     const name = await decrypt(hexToUint8Array(file.name), hexToUint8Array(file.nameIv), fek);
+    const timestamp = await decrypt(hexToUint8Array(file.timestamp), hexToUint8Array(file.timestampIv), fek);
 
     return {
         id: file.id,
         filename: uint8ArrayToString(name),
-        updatedAt: new Date(file.updatedAt).toLocaleString(),
+        updatedAt: new Date(uint8ArrayToString(timestamp)).toLocaleString(),
         fek: fek
     }
 }
@@ -203,11 +204,9 @@ async function selectPatient(patientId) {
             }
 
             SELECTED_PATIENT_FILES = [];
-            console.log("Downloaded patient files:", files);
             for(const f of files) {
                 const decrypted = await decryptFileForDoctor(f);
                 SELECTED_PATIENT_FILES.push(decrypted);
-                console.log(decrypted.filename);
                 container.appendChild(renderFileForDoctor(decrypted));
             }
 

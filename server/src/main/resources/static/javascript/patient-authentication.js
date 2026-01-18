@@ -164,21 +164,16 @@ async function login() {
 async function registerKey(baseUrl = "/webauthn/register") {
     this.form = document.getElementById("registerNewKeyForm");
     const formData = new FormData();
-    formData.append("name", this.form.querySelector('[name="name"]').value);
-    formData.append("dob", this.form.querySelector('[name="dob"]').value);
+
     formData.append("credname", this.form.querySelector('[name="credname"]').value);
     formData.append("captchaToken", document.getElementById("registerCaptchaToken").value);
-
-    console.debug('registerKey: sending /start', { name: this.form.querySelector('[name="name"]').value, dob: this.form.querySelector('[name="dob"]').value, credname: this.form.querySelector('[name="credname"]').value, captcha: formData.get('captchaToken') });
 
     const response = await fetch(baseUrl + "/start", {
         method: 'POST',
         body: formData
     });
 
-    console.debug('registerKey: /start response status', response.status);
     const credentialCreateJson = await initialCheckStatus(response);
-    console.debug('registerKey: credentialCreateJson', credentialCreateJson);
 
     const credentialCreateOptions = {
         publicKey: {
@@ -233,7 +228,6 @@ async function registerKey(baseUrl = "/webauthn/register") {
 
 // Performs the full registration procedure based on the given form data
 async function register() {
-    console.debug('register() called');
 
     const nameInput = document.getElementById("name");
     const dobInput = document.getElementById("dob");

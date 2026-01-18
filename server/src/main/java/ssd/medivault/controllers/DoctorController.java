@@ -201,11 +201,6 @@ public class DoctorController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        System.out.println("GETTING PATIENT FILES");
-        for(EncryptedFile f : fileRepository.findAllByPatient(patient)) {
-            System.out.println(f.getUpdatedAt().toEpochMilli() + " => " + f.getDoctorKeys().size());
-        }
-
         return fileRepository.findAllByPatient(patient)
                 .stream()
                 .filter(f -> f.getDoctorKeys().stream().anyMatch(k -> k.getDoctorId().equals(doctor.getId())))
@@ -219,7 +214,9 @@ public class DoctorController {
                     return new EncryptedFile.FileData(fek, "",
                             EncodingUtils.toHex(f.getFilename()),
                             EncodingUtils.toHex(f.getFilenameIv()),
-                            f.getUpdatedAt().toString(), f.getId());
+                            EncodingUtils.toHex(f.getTimestamp()),
+                            EncodingUtils.toHex(f.getTimestampIv()),
+                            f.getId());
                 })
                 .toList();
     }

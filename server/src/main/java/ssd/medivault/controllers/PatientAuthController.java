@@ -66,7 +66,6 @@ public class PatientAuthController {
                                            HttpSession session) {
         try {
             // Canonicalize inputs
-            String canonicalName = canonicalizeInput(request.name());
             String canonicalCredname = canonicalizeInput(request.credname());
 
             if (!hCaptchaService.verify(request.captchaToken(), httpRequest.getRemoteAddr())) {
@@ -107,8 +106,6 @@ public class PatientAuthController {
      * in the database.
      * If the registration is successful, the patient is automatically logged in and authenticated for future requests.
      *
-     * @param credential the patient credentials (in JSON)
-     * @param credname the credential name provided by the user
      * @param session the HTTP session object
      * @param request the HTTP request object
      * @return the public key of the registered credentials.

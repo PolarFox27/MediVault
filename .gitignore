@@ -6,11 +6,16 @@ build/
 *.db
 *.p12
 *.env
-.log
+*.log
 
 ### PKI Private Keys (NEVER commit!) ###
 *.key
-pki/doctors/*/doctor.p12
+pki/doctors/
+pki/root-ca/
+!pki/root-ca/openssl.cnf
+pki/intermediate-ca/
+!pki/intermediate-ca/openssl.cnf
+
 
 ### STS ###
 .apt_generated

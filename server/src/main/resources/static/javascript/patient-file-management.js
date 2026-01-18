@@ -79,11 +79,12 @@ function renderFile(file) {
 async function decryptFile(file) {
     const fek = await decrypt(hexToUint8Array(file.fek), hexToUint8Array(file.fekIv));
     const name = await decrypt(hexToUint8Array(file.name), hexToUint8Array(file.nameIv), fek);
+    const timestamp = await decrypt(hexToUint8Array(file.timestamp), hexToUint8Array(file.timestampIv), fek);
 
     return {
         id: file.id,
         filename: uint8ArrayToString(name),
-        updatedAt: new Date(file.updatedAt).toLocaleString(),
+        updatedAt: new Date(uint8ArrayToString(timestamp)).toLocaleString(),
         fek: fek
     }
 }
@@ -141,13 +142,15 @@ function openFileInput(){
             const fileBytes = new Uint8Array(await file.arrayBuffer());
             const data = await encrypt(fileBytes, plaintextFek);
             const filename = await encrypt(stringToUint8Array(file.name), plaintextFek);
-
+            const timestamp = await encrypt(stringToUint8Array(new Date().toISOString()), plaintextFek);
 
             const form = new FormData();
             form.append("data", new Blob([data.encryptedData]));
             form.append("dataIv", new Blob([data.iv]));
             form.append("filename", new Blob([filename.encryptedData]));
             form.append("filenameIv", new Blob([filename.iv]));
+            form.append("timestamp", new Blob([timestamp.encryptedData]));
+            form.append("timestampIv", new Blob([timestamp.iv]));
             form.append("fek", new Blob([fek.encryptedData]));
             form.append("fekIv", new Blob([fek.iv]));
 

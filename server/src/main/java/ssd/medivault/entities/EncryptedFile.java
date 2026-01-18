@@ -45,8 +45,13 @@ public class EncryptedFile {
     @Column(nullable = false)
     private byte[] fekIv;
 
+    @Lob
     @Column(nullable = false)
-    private Instant updatedAt;
+    private byte[] timestamp;
+
+    @Lob
+    @Column(nullable = false)
+    private byte[] timestampIv;
 
     @ManyToOne
     private Patient patient;
@@ -67,12 +72,6 @@ public class EncryptedFile {
         this.fekIv = new byte[]{};
     }
 
-    @PrePersist
-    @PreUpdate
-    void onSave() {
-        this.updatedAt = Instant.now();
-    }
-
 
     @Data
     public static class EncryptedFileDTO {
@@ -91,12 +90,14 @@ public class EncryptedFile {
     }
 
     public record FileData(String fek, String fekIv,
-                                  String name, String nameIv,
-                                  String updatedAt, Long id) {}
+                           String name, String nameIv,
+                           String timestamp, String timestampIv,
+                           Long id) {}
 
     public FileData toRecord(){
         return new FileData(EncodingUtils.toHex(this.fek), EncodingUtils.toHex(this.fekIv),
                 EncodingUtils.toHex(this.filename), EncodingUtils.toHex(this.filenameIv),
-                this.updatedAt.toString(), this.id);
+                EncodingUtils.toHex(this.timestamp), EncodingUtils.toHex(this.timestampIv),
+                this.id);
     }
 }
