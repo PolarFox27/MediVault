@@ -6,14 +6,14 @@
     </a>
 
     <div class="auth-container horizontal-padding-50">
-        <h2 class="margin-bottom-20" id="doctor-auth-title">Doctor Login</h2>
+        <h2 class="margin-bottom-20" id="doctor-auth-title">Doctor Authentication</h2>
         <form action="/doctor/login" method="POST" id="doctorLoginForm">
             <label for="doctorPassword" class="font-20 margin-bottom-5">Password</label>
             <input type="password" id="doctorPassword" minlength="8" maxlength="64" name="doctorPassword" required>
             <input type="hidden" id="doctorLoginCaptchaToken" name="doctorCaptchaToken">
             <div id="hcaptcha-doctor-login" class="h-captcha" data-sitekey="e2cc3850-5ae4-487a-a932-570a206ccebe" data-size="invisible" data-callback="onDoctorLoginCaptcha"></div>
             <button id="button-doctor-login" type="button" class="text-button text-button-1 fill-width font-20 margin-bottom-20" onclick="triggerDoctorLoginWithCaptcha()">
-                Login
+                Login/Register
             </button>
         </form>
     </div>

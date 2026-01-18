@@ -7,7 +7,8 @@ function renderDoctorCaptcha() {
             console.debug('hCaptcha widgets rendered', window.doctorCaptchaWidgetId);
 
             fetch('/doctor/api/key').then(response => {
-                document.getElementById("doctor-auth-title").innerText = response.ok ? "Doctor Login" : "Doctor Registration";
+                document.getElementById("doctor-auth-title").innerText = response.ok ? "Doctor Login" : "Doctor Registration"
+                document.getElementById("button-doctor-login").innerText = response.ok ? "Login" : "Register";
             });
         } catch (err) {
             console.warn('hcaptcha.render failed', err);
