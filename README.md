@@ -1,107 +1,180 @@
-# ProjectSSD
+# MediVault Secure Software Project
 
-## I. Members
+## Team Members
 
-## II. Project Structure
+- **Bosschem Nicolas** - 000575046
+- **Bui The** - 000546997
+- **Fernandez Ojeda Franklin** - 000541971
+- **Herbiet Dorian** - 000513131
+- **Otto Aleksandra** - 000569128
+- **Rafaat Moheeb Eskandar Abanoub** - 000567614
 
-## III. Security
+---
 
-##### HTTPS Certificate
+## Project Overview
 
-The development certificate should be stored in `/server/src/main/resources` as a .p12 file. 
-The development password to open this file is `password`. This must be changed for production.
+MediVault is a secure web application designed for sensitive medical data management.  
+It implements strong authentication, PKI-based doctor identity, audit logging, and bot protection.
+
+This README provides a **global setup guide** and directs you to specific documentation for each security component.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Project Structure](#project-structure)
+3. [Setup Guide](#setup-guide)
+    - [1. PKI Infrastructure & Doctor Certificates](#1-pki-infrastructure--doctor-certificates)
+    - [2. Server SSL Configuration](#2-server-ssl-configuration)
+    - [3. hCaptcha Integration](#3-hcaptcha-integration)
+    - [4. Audit Logging](#4-audit-logging)
+    - [5. Elasticsearch & Kibana](#5-elasticsearch--kibana)
+4. [Running the Project](#running-the-project)
+5. [Environment Variables](#environment-variables)
+6. [Security Notes](#security-notes)
+
+---
+
+## Prerequisites
+
+- **Docker & Docker Compose** installed
+- **Java 21** (for local builds)
+- **OpenSSL** and **keytool** (for PKI operations)
+- **Node.js**
+
+---
+
+## Project Structure
 
 ```
-keytool -genkeypair -alias medivault -keyalg RSA -keysize 3072 -storetype PKCS12 -keystore medivault.p12 -validity 3650
+projectssd/
+├── pki/                # PKI infrastructure (doctor certificates, CA)
+├── server/             # Spring Boot backend
+├── logserver/          # Audit log server
+├── docker-compose.yml  # Multi-service orchestration
+├── .env                # Environment variables
+└── README.md           # global README
 ```
 
+---
 
-## Getting started
+## Setup Guide
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+### 1. PKI Infrastructure & Doctor Certificates
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- **Purpose:** Secure doctor authentication using short-lived certificates.
+- **How to:**  
+  See [documentation/README_pki.md](documentation/README_pki.md) for:
+  - Initializing the PKI
+  - Issuing new doctor certificates
+  - Renewing certificates
+  - Directory structure and security notes
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
+**Quick Start:**
+```sh
+cd pki/scripts
+./init-pki.sh                    # Initialize PKI (run once)
+./issue-doctor-cert.sh "Dr. Name" "Hospital"   # Issue doctor certificate
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/bosschemn/projectssd.git
-git branch -M main
-git push -uf origin main
+See [documentation/README_pki.md](documentation/README_pki.md) for details.
+
+---
+
+### 2. Server SSL Configuration
+
+- **Purpose:** Enable HTTPS and client certificate authentication.
+- **How to:**  
+  See [pki/README.md](pki/README.md) for:
+  - Creating the server keystore (`medivault.p12`)
+  - Creating the truststore (`truststore.p12`)
+  - Importing CA certificates
+
+**Quick Start:**
+```sh
+cd server/src/main/resources
+keytool -genkeypair ...              # Create server certificate
+keytool -importcert ...              # Import CA to truststore
 ```
+See [documentation/README_pki](documentation/README_pki.md) for full commands.
 
-## Integrate with your tools
+---
 
-- [ ] [Set up project integrations](https://gitlab.com/bosschemn/projectssd/-/settings/integrations)
+### 3. hCaptcha Integration
 
-## Collaborate with your team
+- **Purpose:** Protect sensitive endpoints from bots and automated abuse.
+- **How to:**  
+  See [documentation/README_hcaptcha.md](documentation/README_hcaptcha.md) for:
+  - How hCaptcha works
+  - Key setup (development vs production)
+  - Server-side verification workflow
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+**Quick Start:**
+- Obtain hCaptcha keys from [hcaptcha.com](https://www.hcaptcha.com/)
+- Set `HCAPTCHA_SECRET` in `.env`
+- See [documentation/README_hcaptcha.md](documentation/README_hcaptcha.md) for integration details
 
-## Test and Deploy
+---
 
-Use the built-in continuous integration in GitLab.
+### 4. Audit Logging
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+- **Purpose:** Record all sensitive actions for accountability and security monitoring.
+- **How to:**  
+  See [documentation/README_docker&Logs.md](documentation/README_docker&Logs.md) for:
+  - Audit log format
+  - HMAC signing
+  - Log shipping to Elasticsearch
 
-***
+---
 
-# Editing this README
+### 5. Elasticsearch & Kibana
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+- **Purpose:** Store and visualize audit logs and application events.
+- **How to:**  
+  See [documentation/README_docker&Logs.md](documentation/README_docker&Logs.md) for:
+  - Service configuration
+  - Accessing Kibana dashboard
+  - Security notes
 
-## Suggestions for a good README
+---
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## Running the Project
 
-## Name
-Choose a self-explaining name for your project.
+1. **Set up PKI and certificates** as described above.
+2. **Configure environment variables** in `.env` (see below).
+3. **Build and start all services:**
+   ```sh
+   export HCAPTCHA_SECRET={HCAPTCHA_SECRET}
+   docker compose build && docker compose up
+   ```
+4. **Access the application:**
+   - Backend: https://localhost:8443
+   - Kibana: http://localhost:5601
+   - Logserver : http://localhost:5555
+   - ElasticSearch : http://localhost:9200
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+---
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Environment Variables
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Edit `.env` to configure secrets and paths:
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+| Variable                  | Description                          |
+|---------------------------|--------------------------------------|
+| SSL_KEYSTORE_LOCATION     | Path to server keystore (.p12)       |
+| SSL_KEYSTORE_PASSWORD     | Keystore password                    |
+| SSL_TRUSTSTORE_LOCATION   | Path to truststore (.p12)            |
+| SSL_TRUSTSTORE_PASSWORD   | Truststore password                  |
+| HCAPTCHA_SECRET           | hCaptcha secret key                  |
+| ELASTIC_PASSWORD          | Elasticsearch password               |
+| ELASTICSEARCH_USERNAME    | Elasticsearch username               |
+| ELASTICSEARCH_PASSWORD    | Elasticsearch password               |
+| AUDIT_HMAC_KEY            | Audit log HMAC signing key           |
+| KIBANA_ENCRYPTION_KEY     | Kibana session encryption key        |
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+---
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+**For any component-specific instructions, always refer to the README in the corresponding directory.**
