@@ -13,8 +13,8 @@
 
 ## Project Overview
 
-MediVault is a secure web application designed for sensitive medical data management.  
-It implements strong authentication, PKI-based doctor identity, audit logging, and bot protection.
+MediVault is an end-to-end encrypted web application designed for sensitive medical data management.  
+It implements passwordless authentication using Webauthn for patients, PKI-based doctor identity, audit logging, and bot protection.
 
 This README provides a **global setup guide** and directs you to specific documentation for each security component.
 
